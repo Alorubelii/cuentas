@@ -21,14 +21,19 @@
   --verde:#2E6B4F; --carmin:#983434; --azul:#2B4C7E; --dorado:#A87C22;
   --radio:14px; --radio-s:9px;
   --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
+html{background:var(--tinta)}
+/* franja fija bajo la hora y la isla dinámica: el contenido no se cuela por debajo al hacer scroll */
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--safe-t);background:var(--tinta);z-index:45;pointer-events:none}
 body{
   font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
   background:var(--papel); color:var(--tinta);
   font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
-  padding-bottom:calc(74px + var(--safe-b));
+  padding-bottom:calc(60px + var(--safe-b));
+  min-height:100vh;min-height:100dvh;
 }
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
@@ -37,7 +42,7 @@ input,select,textarea{font:inherit;color:inherit}
 .oculto{display:none !important}
 
 /* ---------- portada ---------- */
-.portada{background:var(--tinta);color:#EDEFE8;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 20px}
+.portada{background:var(--tinta);color:#EDEFE8;padding:max(16px, calc(var(--safe-t) + 6px)) max(18px, env(safe-area-inset-left,0px)) 20px}
 .mes-nav{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mes-nav button{width:38px;height:38px;border-radius:50%;color:#EDEFE8;opacity:.75;font-size:20px;line-height:1}
 .mes-nav button:hover{background:rgba(255,255,255,.09);opacity:1}
@@ -140,14 +145,16 @@ h2:first-child{margin-top:4px}
 .regla button{color:var(--tinta-45);font-size:19px;padding:2px 6px;line-height:1}
 
 /* nav */
-nav{position:fixed;left:0;right:0;bottom:0;background:rgba(252,252,250,.94);backdrop-filter:blur(12px);border-top:1px solid var(--linea);display:flex;padding-bottom:var(--safe-b);z-index:40}
-nav button{flex:1;padding:10px 2px 11px;font-size:11.5px;font-weight:500;color:var(--tinta-45);display:flex;flex-direction:column;align-items:center;gap:4px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--tarjeta);backdrop-filter:blur(12px);border-top:1px solid var(--linea);display:flex;padding-bottom:max(calc(var(--safe-b) - 12px), 4px);z-index:40}
+/* rellena por debajo de la barra por si iOS deja un hueco en el borde inferior */
+nav::after{content:'';position:absolute;left:0;right:0;top:100%;height:120px;background:inherit}
+nav button{flex:1;padding:9px 2px 7px;font-size:11.5px;font-weight:500;color:var(--tinta-45);display:flex;flex-direction:column;align-items:center;gap:4px}
 nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 nav button[aria-current="true"]{color:var(--tinta);font-weight:600}
 
 /* hoja / modal */
 .velo{position:fixed;inset:0;background:rgba(22,33,46,.42);z-index:50;display:flex;align-items:flex-end;justify-content:center}
-.hoja{background:var(--papel);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:8px 18px calc(24px + var(--safe-b));max-height:88vh;overflow-y:auto;animation:sube .28s cubic-bezier(.32,.72,0,1)}
+.hoja{background:var(--papel);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:8px 18px calc(24px + var(--safe-b));max-height:88vh;max-height:calc(100dvh - var(--safe-t) - 14px);overflow-y:auto;overscroll-behavior:contain;animation:sube .28s cubic-bezier(.32,.72,0,1)}
 @keyframes sube{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .tirador{width:38px;height:4px;border-radius:2px;background:var(--linea);margin:6px auto 14px}
 .hoja h3{margin:0 0 3px;font-size:19px;font-weight:600;letter-spacing:-.01em}
@@ -168,7 +175,23 @@ nav button[aria-current="true"]{color:var(--tinta);font-weight:600}
 .acciones{display:flex;gap:9px;margin-top:22px}
 
 /* aviso */
-.aviso{position:fixed;left:14px;right:14px;bottom:calc(84px + var(--safe-b));background:var(--tinta);color:#EDEFE8;border-radius:var(--radio-s);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:60;font-size:14px;box-shadow:0 8px 26px rgba(22,33,46,.28);max-width:520px;margin:0 auto;animation:sube .25s ease}
+/* bloqueo */
+html.bloqueada body>header,html.bloqueada main,html.bloqueada nav,html.bloqueada #capaHoja,
+html.tapada body>header,html.tapada main,html.tapada nav,html.tapada #capaHoja{visibility:hidden}
+html.bloqueada body{background:var(--tinta)}
+html.bloqueada #candado{display:flex !important}
+.candado{position:fixed;inset:0;z-index:100;padding-top:calc(var(--safe-t) + 24px) !important;padding-bottom:calc(var(--safe-b) + 24px) !important;background:linear-gradient(#22324A,#121B26);color:#EDEFE8;display:flex;align-items:center;justify-content:center;padding:24px}
+.candado-caja{width:100%;max-width:320px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.candado-logo{width:84px;height:84px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.candado h1{font-size:24px;margin:16px 0 4px;font-weight:700}
+.candado p{opacity:.75;font-size:14.5px;margin:0 0 22px;line-height:1.45}
+.candado .btn{background:#EDEFE8;color:var(--tinta)}
+.candado .btn.peligro{background:transparent;color:#F0A39E;border-color:#7A3A3A}
+.candado-pin{display:flex;gap:8px;width:100%;margin-top:12px}
+.candado-pin input{flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);border-radius:var(--radio-s);padding:12px;color:#fff;font-size:20px;letter-spacing:.35em;text-align:center}
+.candado-pin .btn{width:auto}
+.candado-link{color:#9DC2F0;font-size:14px;margin-top:16px;font-weight:500}
+.aviso{position:fixed;left:14px;right:14px;bottom:calc(62px + var(--safe-b));background:var(--tinta);color:#EDEFE8;border-radius:var(--radio-s);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:60;font-size:14px;box-shadow:0 8px 26px rgba(22,33,46,.28);max-width:520px;margin:0 auto;animation:sube .25s ease}
 .aviso button{color:#9DC2F0;font-weight:600;white-space:nowrap}
 
 /* recibos */
@@ -219,6 +242,7 @@ nav button[aria-current="true"]{color:var(--tinta);font-weight:600}
 @media(min-width:640px){
   body{padding-bottom:108px}
   .portada>*{max-width:720px;margin-left:auto;margin-right:auto}
+  nav::after{display:none}
   nav{left:16px;right:16px;bottom:20px;max-width:620px;margin:0 auto;border:1px solid var(--linea);border-radius:100px;box-shadow:0 8px 26px rgba(22,33,46,.13)}
   nav button{flex-direction:row;gap:8px;font-size:13.5px;padding:13px 6px}
   .aviso{bottom:96px}
@@ -231,6 +255,11 @@ nav button[aria-current="true"]{color:var(--tinta);font-weight:600}
 </style>
 </head>
 <body>
+<script>
+// Si el bloqueo está activo, se oculta todo antes de pintar nada
+try { var _b = JSON.parse(localStorage.getItem('calderilla.bloqueo') || 'null'); if (_b && _b.activo) document.documentElement.classList.add('bloqueada'); } catch (e) {}
+</script>
+<div id="candado" class="candado oculto"></div>
 
 <header class="portada" id="portada">
   <div class="mes-nav">
@@ -354,7 +383,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.6';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.8';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1103,6 +1132,8 @@ function vistaAjustes() {
     </div>
     <div class="cat-meta" style="padding:9px 4px 0"><span>Además hay ${REGLAS_INICIALES.length} reglas de fábrica (Mercadona, Amazon, Zurich…)</span></div>
     <div style="margin-top:12px"><button class="btn sec" onclick="reclasificar()">Volver a clasificar todo con las reglas</button></div>
+
+    ${bloqueAjustesSeguridad()}
 
     ${bloqueDriveAjustes()}
 
@@ -2799,6 +2830,221 @@ function desconectarDrive() {
 
 copiaDriveSiToca();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') copiaDriveSiToca(); });
+/* ============================================================
+   17. Bloqueo con Face ID / Touch ID y PIN
+   Face ID se pide con una llave de acceso (WebAuthn) guardada en el
+   iPhone. El PIN es la alternativa si Face ID falla.
+   ============================================================ */
+
+const CLAVE_BLOQUEO = 'calderilla.bloqueo';
+const MINUTOS_SIN_PEDIR = 1;     // al volver a la app antes de 1 minuto no vuelve a pedirlo
+var candado = (() => { try { return JSON.parse(localStorage.getItem(CLAVE_BLOQUEO) || 'null'); } catch (e) { return null; } })();
+let fallosPin = 0;
+let salidaEn = 0;
+
+function guardarCandado() {
+  try { candado ? localStorage.setItem(CLAVE_BLOQUEO, JSON.stringify(candado)) : localStorage.removeItem(CLAVE_BLOQUEO); } catch (e) {}
+}
+const b64url = buf => aB64(buf).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const deB64url = t => deB64(t.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((t.length + 3) % 4));
+
+async function hashPin(pin, saltB64) {
+  return claveDesdePasswordRapida(pin, deB64(saltB64));
+}
+async function claveDesdePasswordRapida(pass, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+  return aB64(await crypto.subtle.deriveBits({name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 200000}, base, 256));
+}
+function hayFaceId() {
+  return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
+}
+
+/* ---------- pantalla de bloqueo ---------- */
+
+function bloquear() {
+  if (!candado || !candado.activo) return;
+  document.documentElement.classList.add('bloqueada');
+  cerrarHoja();
+  const cap = $('#candado');
+  cap.innerHTML = `<div class="candado-caja">
+      <img src="apple-touch-icon.png" alt="" class="candado-logo">
+      <h1>Calderilla</h1>
+      <p id="candadoMsg">${candado.credId ? 'Usa Face ID para entrar' : 'Escribe tu PIN'}</p>
+      ${candado.credId ? `<button class="btn" id="btnFace" onclick="desbloquearFace()">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9.5v1M15 9.5v1M12 9.5v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>
+        Desbloquear con Face ID</button>` : ''}
+      <div class="candado-pin ${candado.credId ? 'oculto' : ''}" id="zonaPin">
+        <input type="password" id="pinEntrada" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="PIN" autocomplete="off"
+          onkeydown="if(event.key==='Enter')desbloquearPin()">
+        <button class="btn" onclick="desbloquearPin()">Entrar</button>
+      </div>
+      ${candado.credId ? `<button class="candado-link" id="linkPin" onclick="mostrarPin()">Usar el PIN</button>` : ''}
+      <button class="candado-link" onclick="olvidePin()">He olvidado el PIN</button>
+    </div>`;
+  cap.classList.remove('oculto');
+  if (!candado.credId) setTimeout(() => $('#pinEntrada') && $('#pinEntrada').focus(), 200);
+}
+
+function mostrarPin() {
+  const zona = $('#zonaPin'); if (zona) zona.classList.remove('oculto');
+  const link = $('#linkPin'); if (link) link.remove();
+  const caja = $('#pinEntrada'); if (caja) caja.focus();
+}
+
+function abrirCandado() {
+  document.documentElement.classList.remove('bloqueada', 'tapada');
+  $('#candado').classList.add('oculto');
+  $('#candado').innerHTML = '';
+  fallosPin = 0;
+  try { sessionStorage.setItem('calderilla.abierta', String(Date.now())); } catch (e) {}
+  pintar();
+}
+
+async function desbloquearFace(auto) {
+  const msg = $('#candadoMsg');
+  try {
+    const cred = await navigator.credentials.get({publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId: location.hostname,
+      allowCredentials: [{type: 'public-key', id: deB64url(candado.credId)}],
+      userVerification: 'required',
+      timeout: 60000,
+    }});
+    const flags = new Uint8Array(cred.response.authenticatorData)[32];
+    if (!(flags & 0x04)) throw new Error('sin verificar');   // bit UV: Face ID / código superado
+    abrirCandado();
+  } catch (e) {
+    if (auto) return;   // el intento automático al abrir puede no estar permitido: queda el botón
+    if (msg) msg.textContent = 'No se ha podido comprobar. Inténtalo otra vez o usa el PIN.';
+    const zona = $('#zonaPin'); if (zona) zona.classList.remove('oculto');
+    const link = $('#linkPin'); if (link) link.remove();
+  }
+}
+
+async function desbloquearPin() {
+  const caja = $('#pinEntrada');
+  const pin = (caja.value || '').trim();
+  if (!pin) return;
+  if (fallosPin >= 5) {
+    const espera = Math.min(300, 15 * 2 ** (fallosPin - 5));
+    if (Date.now() - (candado.ultimoFallo || 0) < espera * 1000) {
+      $('#candadoMsg').textContent = `Demasiados intentos. Espera ${espera} segundos.`;
+      return;
+    }
+  }
+  if (await hashPin(pin, candado.pinSalt) === candado.pinHash) return abrirCandado();
+  fallosPin++;
+  candado.ultimoFallo = Date.now();
+  caja.value = '';
+  $('#candadoMsg').textContent = 'PIN incorrecto.';
+  caja.animate([{transform: 'translateX(-8px)'}, {transform: 'translateX(8px)'}, {transform: 'translateX(0)'}], {duration: 220, iterations: 2});
+}
+
+function olvidePin() {
+  $('#candadoMsg').innerHTML = 'Sin el PIN ni Face ID no se puede entrar. Puedes <b>borrar los datos de este dispositivo</b> y recuperarlos después desde tu copia de Drive.';
+  const b = document.createElement('button');
+  b.className = 'btn peligro'; b.style.marginTop = '14px';
+  b.textContent = 'Borrar datos y empezar';
+  b.onclick = () => {
+    if (!confirm('Se borrarán los datos de este dispositivo. Las copias de Drive no se tocan. ¿Seguro?')) return;
+    S = ESTADO_INICIAL(); guardarLocal();
+    candado = null; guardarCandado();
+    abrirCandado();
+    irA('Ajustes');
+    avisar('Datos borrados. Recupéralos con «Ya tengo copias» en Drive.');
+  };
+  $('.candado-caja').appendChild(b);
+}
+
+/* ---------- activar y desactivar desde Ajustes ---------- */
+
+function bloqueAjustesSeguridad() {
+  const activo = candado && candado.activo;
+  return `<h2>Seguridad</h2>
+    <div class="tarjeta lista-aj">
+      <button class="aj" onclick="${activo ? 'quitarCandado()' : 'ponerCandado()'}">
+        <div><b>${activo ? (candado.credId ? 'Face ID y PIN activados' : 'PIN activado') : 'Pedir Face ID al entrar'}</b>
+          <small>${activo ? 'La app se bloquea al abrirla y al volver a ella pasado ' + MINUTOS_SIN_PEDIR + ' minuto. Toca para desactivarlo.' : 'Nadie que coja tu móvil podrá ver tus cuentas. Si Face ID falla, entras con un PIN.'}</small></div>
+        <span class="sw" aria-pressed="${!!activo}"></span>
+      </button>
+      ${activo ? '<button class="aj" onclick="ponerCandado()"><div><b>Cambiar el PIN</b><small>También vuelve a registrar Face ID</small></div><span>›</span></button>' : ''}
+    </div>`;
+}
+
+function ponerCandado() {
+  const caja = 'width:100%;background:var(--tarjeta);border:1px solid var(--linea);border-radius:var(--radio-s);padding:12px 13px;font-size:20px;letter-spacing:.3em;text-align:center';
+  hoja(`<h3>Bloquear la app</h3>
+    <p class="det">Primero elige un PIN de 4 a 8 números. Sirve para entrar si Face ID falla. Después el iPhone te pedirá Face ID para registrarlo.</p>
+    <label for="pin1">PIN</label>
+    <input type="password" id="pin1" inputmode="numeric" pattern="[0-9]*" maxlength="8" style="${caja}" autocomplete="new-password">
+    <label for="pin2">Repite el PIN</label>
+    <input type="password" id="pin2" inputmode="numeric" pattern="[0-9]*" maxlength="8" style="${caja}" autocomplete="new-password">
+    <div class="acciones"><button class="btn sec" onclick="cerrarHoja()">Cancelar</button>
+      <button class="btn" id="btnCandado" onclick="guardarNuevoCandado()">${hayFaceId() ? 'Seguir y activar Face ID' : 'Activar'}</button></div>`);
+  setTimeout(() => $('#pin1') && $('#pin1').focus(), 250);
+}
+
+async function guardarNuevoCandado() {
+  const p1 = $('#pin1').value.trim(), p2 = $('#pin2').value.trim();
+  if (!/^\d{4,8}$/.test(p1)) return avisar('El PIN tiene que tener entre 4 y 8 números.');
+  if (p1 !== p2) return avisar('Los dos PIN no coinciden.');
+  if (/^(\d)\1+$/.test(p1) || '0123456789'.includes(p1) || '9876543210'.includes(p1)) return avisar('Ese PIN es demasiado fácil. Elige otro.');
+  const salt = aB64(crypto.getRandomValues(new Uint8Array(16)));
+  const nuevo = {activo: true, pinSalt: salt, pinHash: await hashPin(p1, salt), credId: null};
+  if (hayFaceId()) {
+    try {
+      const cred = await navigator.credentials.create({publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: {name: 'Calderilla', id: location.hostname},
+        user: {id: crypto.getRandomValues(new Uint8Array(16)), name: 'Calderilla', displayName: 'Calderilla'},
+        pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],
+        authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred'},
+        timeout: 60000,
+      }});
+      nuevo.credId = b64url(cred.rawId);
+    } catch (e) {
+      avisar('Face ID no se ha podido activar. Queda activado solo el PIN.');
+    }
+  }
+  candado = nuevo;
+  guardarCandado();
+  try { sessionStorage.setItem('calderilla.abierta', String(Date.now())); } catch (e) {}
+  cerrarHoja(); pintar();
+  if (nuevo.credId) avisar('Listo. La próxima vez que abras la app te pedirá Face ID.');
+  else if (!hayFaceId()) avisar('PIN activado.');
+}
+
+function quitarCandado() {
+  if (!confirm('La app dejará de pedir Face ID y PIN. ¿Seguro?')) return;
+  candado = null;
+  guardarCandado();
+  pintar();
+  avisar('Bloqueo desactivado. Puedes borrar la llave «Calderilla» en Ajustes del iPhone → Contraseñas.');
+}
+
+/* ---------- cuándo se bloquea ---------- */
+
+document.addEventListener('visibilitychange', () => {
+  if (!candado || !candado.activo) return;
+  if (document.visibilityState === 'hidden') {
+    salidaEn = Date.now();
+    document.documentElement.classList.add('tapada');   // que no se vean cifras en el selector de apps
+  } else {
+    if (Date.now() - salidaEn > MINUTOS_SIN_PEDIR * 60000 && !document.documentElement.classList.contains('bloqueada')) bloquear();
+    else document.documentElement.classList.remove('tapada');
+  }
+});
+
+(function arrancarCandado() {
+  if (!candado || !candado.activo) { document.documentElement.classList.remove('bloqueada'); return; }
+  let abierta = 0;
+  try { abierta = +sessionStorage.getItem('calderilla.abierta') || 0; } catch (e) {}
+  // tras una recarga por actualización no vuelve a pedirlo si acabas de entrar
+  if (Date.now() - abierta < MINUTOS_SIN_PEDIR * 60000) { document.documentElement.classList.remove('bloqueada'); return; }
+  bloquear();
+  if (candado.credId) desbloquearFace(true);   // en algunos iPhone salta solo; si no, se pulsa el botón
+})();
+
 </script>
 </body>
 </html>
