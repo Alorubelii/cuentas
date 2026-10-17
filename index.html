@@ -412,7 +412,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.12';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.13';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -2596,16 +2596,22 @@ function pintar() {
   }
 }
 
-let ultimoToqueNav = 0;
+// Las pestañas cambian en cuanto el dedo toca (como la barra de una app nativa).
+// Así funcionan al primer toque aunque iOS se quede con el "levantar el dedo"
+// para devolver el foco a la app tras Face ID o al abrirla.
+let ultimoToqueNav = {v: '', t: 0};
+function tocarPestana(b, e) {
+  if (e && e.cancelable) e.preventDefault();
+  const v = b.dataset.vista;
+  // el mismo toque puede llegar como touchstart y luego como click: solo cuenta una vez
+  if (ultimoToqueNav.v === v && Date.now() - ultimoToqueNav.t < 600) return;
+  ultimoToqueNav = {v, t: Date.now()};
+  irA(v);
+}
 document.querySelectorAll('nav button').forEach(b => {
-  let x0 = 0, y0 = 0;
-  b.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; });
-  b.addEventListener('pointerup', e => {
-    if (Math.abs(e.clientX - x0) > 14 || Math.abs(e.clientY - y0) > 14) return;
-    ultimoToqueNav = Date.now();
-    irA(b.dataset.vista);
-  });
-  b.addEventListener('click', () => { if (Date.now() - ultimoToqueNav > 600) irA(b.dataset.vista); });
+  b.addEventListener('touchstart', e => tocarPestana(b, e), {passive: false});
+  b.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') tocarPestana(b, e); });
+  b.addEventListener('click', e => tocarPestana(b, e));
 });
 
 $('#mesAnt').onclick = () => { if (S.mesActivo) { S.mesActivo = mesDesplazado(S.mesActivo, -1); guardar(); pintar(); } };
@@ -3126,6 +3132,7 @@ function mostrarPin() {
 }
 
 function abrirCandado() {
+  try { window.focus(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) {}
   document.documentElement.classList.remove('bloqueada', 'tapada');
   $('#candado').classList.add('oculto');
   $('#candado').innerHTML = '';
