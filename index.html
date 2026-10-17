@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Calderilla</title>
-<meta name="theme-color" content="#16212E">
+<meta name="theme-color" content="#FCFCFA">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -25,9 +25,9 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
-html{background:var(--tinta)}
+html{background:var(--papel)}
 /* franja fija bajo la hora y la isla dinámica: el contenido no se cuela por debajo al hacer scroll */
-body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--safe-t);background:var(--tinta);z-index:45;pointer-events:none}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--safe-t);background:var(--tarjeta);z-index:45;pointer-events:none}
 body{
   font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
   background:var(--papel); color:var(--tinta);
@@ -47,31 +47,32 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .oculto{display:none !important}
 
 /* ---------- portada ---------- */
-.portada{background:var(--tinta);color:#EDEFE8;padding:max(16px, calc(var(--safe-t) + 6px)) max(18px, env(safe-area-inset-left,0px)) 20px}
+.portada{background:var(--tarjeta);color:var(--tinta);border-bottom:1px solid var(--linea);padding:max(12px, calc(var(--safe-t) + 4px)) max(18px, env(safe-area-inset-left,0px)) 18px}
 .mes-nav{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.mes-nav button{width:38px;height:38px;border-radius:50%;color:#EDEFE8;opacity:.75;font-size:20px;line-height:1}
-.mes-nav button:hover{background:rgba(255,255,255,.09);opacity:1}
-.mes-nav button:disabled{opacity:.2;cursor:default;background:none}
-.mes-titulo{font-size:21px;font-weight:600;letter-spacing:-.01em;text-align:center;flex:1}
-.mes-titulo small{display:block;font-size:11px;font-weight:400;opacity:.5;letter-spacing:.06em;margin-top:1px}
+.mes-nav button{width:40px;height:40px;border-radius:50%;color:var(--tinta);background:#F0F1EC;font-size:22px;line-height:1;font-weight:500}
+.mes-nav button:active{background:var(--linea)}
+.mes-nav button:disabled{opacity:.3;cursor:default}
+.mes-nav .mes-titulo{background:none;width:auto;height:auto;border-radius:10px}
+.mes-titulo{font-size:22px;font-weight:700;letter-spacing:-.015em;text-align:center;flex:1}
+.mes-titulo small{display:block;font-size:12.5px;font-weight:500;color:var(--tinta-45);letter-spacing:0;margin-top:2px}
 
-.cuentas{display:flex;gap:6px;margin-top:15px;overflow-x:auto;scrollbar-width:none}
+.cuentas{display:flex;gap:7px;margin-top:14px;overflow-x:auto;scrollbar-width:none}
 .cuentas::-webkit-scrollbar{display:none}
-.cuentas button{border:1px solid rgba(255,255,255,.24);border-radius:100px;padding:5px 12px;font-size:13px;color:#EDEFE8;opacity:.72;white-space:nowrap;font-weight:500;flex:none}
-.cuentas button:hover{opacity:1}
-.cuentas button[aria-pressed="true"]{background:#EDEFE8;color:var(--tinta);border-color:#EDEFE8;opacity:1}
-.libro{margin-top:16px;font-size:15px}
-.libro .fila{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0}
-.libro .fila span{opacity:.62}
-.libro .fila b{font-weight:500;font-size:17px}
-.libro .total{border-top:1px solid rgba(255,255,255,.22);margin-top:7px;padding-top:11px}
-.libro .total span{opacity:.85;font-weight:500}
-.libro .total b{font-size:29px;font-weight:700;letter-spacing:-.02em}
-.libro .pos{color:#7FC9A0}.libro .neg{color:#E8918D}
+.cuentas button{border:1px solid var(--linea);background:var(--tarjeta);border-radius:100px;padding:7px 14px;font-size:14px;color:var(--tinta-70);white-space:nowrap;font-weight:600;flex:none}
+.cuentas button[aria-pressed="true"]{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.libro{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.libro .fila{display:flex;flex-direction:column;gap:3px;background:#F4F5F0;border-radius:12px;padding:11px 13px}
+.libro .fila span{font-size:13px;font-weight:600;color:var(--tinta-45)}
+.libro .fila b{font-weight:700;font-size:19px;letter-spacing:-.01em}
+.libro .total{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center;background:var(--tinta);color:#fff;padding:14px 16px}
+.libro .total span{color:rgba(255,255,255,.75);font-size:15px}
+.libro .total b{font-size:28px;letter-spacing:-.02em}
+.libro .pos{color:var(--verde)}.libro .neg{color:var(--carmin)}
+.libro .total .pos{color:#8EDDB0}.libro .total .neg{color:#F4A6A0}
 
-.barra{margin-top:15px;height:9px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden;display:flex}
-.barra i{display:block;height:100%;background:#E8918D;transition:width .45s cubic-bezier(.4,0,.2,1)}
-.barra-pie{display:flex;justify-content:space-between;margin-top:7px;font-size:12px;opacity:.55}
+.barra{margin-top:14px;height:8px;border-radius:4px;background:#E6E8E1;overflow:hidden;display:flex}
+.barra i{display:block;height:100%;background:var(--azul);border-radius:4px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+.barra-pie{display:flex;justify-content:space-between;margin-top:7px;font-size:13px;font-weight:500;color:var(--tinta-45)}
 
 /* ---------- contenido ---------- */
 main{padding:18px 16px 8px;max-width:720px;margin:0 auto}
@@ -406,7 +407,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.9';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.10';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -2590,8 +2591,17 @@ function pintar() {
   }
 }
 
-document.querySelectorAll('nav button').forEach(b =>
-  b.onclick = () => irA(b.dataset.vista));
+let ultimoToqueNav = 0;
+document.querySelectorAll('nav button').forEach(b => {
+  let x0 = 0, y0 = 0;
+  b.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; });
+  b.addEventListener('pointerup', e => {
+    if (Math.abs(e.clientX - x0) > 14 || Math.abs(e.clientY - y0) > 14) return;
+    ultimoToqueNav = Date.now();
+    irA(b.dataset.vista);
+  });
+  b.addEventListener('click', () => { if (Date.now() - ultimoToqueNav > 600) irA(b.dataset.vista); });
+});
 
 $('#mesAnt').onclick = () => { if (S.mesActivo) { S.mesActivo = mesDesplazado(S.mesActivo, -1); guardar(); pintar(); } };
 $('#mesSig').onclick = () => { if (S.mesActivo) { S.mesActivo = mesDesplazado(S.mesActivo, 1); guardar(); pintar(); } };
@@ -2648,19 +2658,25 @@ async function comprobarActualizacion() {
     if (intentada === v) return;
     try { sessionStorage.setItem('cuentas.recargada', v); } catch (e) {}
     guardarLocal();
-    if (ocupado()) {
-      avisar('Hay una versión nueva de la app.', {txt: 'Actualizar', fn: 'location.reload()'});
-    } else {
-      location.reload();
-    }
+    if (!tocadoDesdeQueVolvio && !ocupado()) location.reload();
+    else recargaPendiente = true;   // se aplica cuando salgas de la app, sin que lo notes
   } catch (e) {
     // sin conexión o GitHub no responde: se intentará la próxima vez
   } finally {
     buscandoVersion = false;
   }
 }
+let tocadoDesdeQueVolvio = false, recargaPendiente = false;
+['pointerdown', 'keydown'].forEach(t => document.addEventListener(t, () => { tocadoDesdeQueVolvio = true; }, {capture: true, passive: true}));
 comprobarActualizacion();
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarActualizacion(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    tocadoDesdeQueVolvio = false;
+    if (recargaPendiente) { recargaPendiente = false; guardarLocal(); location.reload(); }
+  } else {
+    comprobarActualizacion();
+  }
+});
 window.addEventListener('pageshow', e => { if (e.persisted) comprobarActualizacion(); });
 setInterval(comprobarActualizacion, 30 * 60 * 1000);
 
