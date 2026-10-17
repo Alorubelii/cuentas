@@ -407,7 +407,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.10';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.11';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -3131,6 +3131,8 @@ function abrirCandado() {
 
 async function desbloquearFace(auto) {
   const msg = $('#candadoMsg');
+  if (pidiendoFace) return;
+  pidiendoFace = true;
   try {
     const cred = await navigator.credentials.get({publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
@@ -3147,6 +3149,8 @@ async function desbloquearFace(auto) {
     if (msg) msg.textContent = 'No se ha podido comprobar. Inténtalo otra vez o usa el PIN.';
     const zona = $('#zonaPin'); if (zona) zona.classList.remove('oculto');
     const link = $('#linkPin'); if (link) link.remove();
+  } finally {
+    setTimeout(() => { pidiendoFace = false; }, 800);   // margen: iOS avisa del cambio de visibilidad un instante después
   }
 }
 
@@ -3193,7 +3197,7 @@ function bloqueAjustesSeguridad() {
     <div class="tarjeta lista-aj">
       <button class="aj" onclick="${activo ? 'quitarCandado()' : 'ponerCandado()'}">
         <div><b>${activo ? (candado.credId ? 'Face ID y PIN activados' : 'PIN activado') : 'Pedir Face ID al entrar'}</b>
-          <small>${activo ? 'La app se bloquea al abrirla y al volver a ella pasado ' + MINUTOS_SIN_PEDIR + ' minuto. Toca para desactivarlo.' : 'Nadie que coja tu móvil podrá ver tus cuentas. Si Face ID falla, entras con un PIN.'}</small></div>
+          <small>${activo ? 'Se bloquea al abrirla y cada vez que sales al inicio o a otra app. Toca para desactivarlo.' : 'Nadie que coja tu móvil podrá ver tus cuentas. Si Face ID falla, entras con un PIN.'}</small></div>
         <span class="sw" aria-pressed="${!!activo}"></span>
       </button>
       ${activo ? '<button class="aj" onclick="ponerCandado()"><div><b>Cambiar el PIN</b><small>También vuelve a registrar Face ID</small></div><span>›</span></button>' : ''}
@@ -3253,16 +3257,21 @@ function quitarCandado() {
 
 /* ---------- cuándo se bloquea ---------- */
 
+// Se bloquea en cuanto sales de la app (al inicio, a otra app o al bloquear el móvil)
+let pidiendoFace = false, eligiendoArchivo = 0;
 document.addEventListener('visibilitychange', () => {
   if (!candado || !candado.activo) return;
   if (document.visibilityState === 'hidden') {
-    salidaEn = Date.now();
-    document.documentElement.classList.add('tapada');   // que no se vean cifras en el selector de apps
-  } else {
-    if (Date.now() - salidaEn > MINUTOS_SIN_PEDIR * 60000 && !document.documentElement.classList.contains('bloqueada')) bloquear();
-    else document.documentElement.classList.remove('tapada');
+    // el propio Face ID o el selector de archivos no cuentan como salir
+    if (pidiendoFace || Date.now() - eligiendoArchivo < 120000) return;
+    try { sessionStorage.removeItem('calderilla.abierta'); } catch (e) {}
+    bloquear();
+  } else if (document.documentElement.classList.contains('bloqueada') && candado.credId && !pidiendoFace) {
+    desbloquearFace(true);
   }
 });
+document.getElementById('ficheroInput').addEventListener('click', () => { eligiendoArchivo = Date.now(); });
+document.getElementById('ficheroInput').addEventListener('change', () => { eligiendoArchivo = 0; });
 
 (function arrancarCandado() {
   if (!candado || !candado.activo) { document.documentElement.classList.remove('bloqueada'); return; }
