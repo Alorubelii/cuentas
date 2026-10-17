@@ -413,7 +413,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.15';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.17';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -819,7 +819,7 @@ function traspasosCruzados(mes) {
   const suenaATraspaso = m => /traspaso|transferencia|a su favor|cuenta propia/.test(norm(m.concepto + ' ' + m.movimiento));
   const candidatos = S.movs.filter(m =>
     (claveMes(m.fecha) === mes || claveMes(m.fecha) === mesAnterior) &&
-    m.cat !== 'traspaso' && !m.excluir && Math.abs(m.importe) >= 10);
+    !m.excluir && Math.abs(m.importe) >= 10);   // incluye los ya marcados: su pareja en la otra cuenta puede no estarlo
   const pares = [];
   const usados = new Set();
   const dias = (a, b) => Math.abs(new Date(a) - new Date(b)) / 86400000;
@@ -829,12 +829,25 @@ function traspasosCruzados(mes) {
       !usados.has(x.id) && x.id !== a.id && x.cuenta !== a.cuenta &&
       Math.abs(x.importe + a.importe) < 0.01 && dias(x.fecha, a.fecha) <= 4);
     if (b && (suenaATraspaso(a) || suenaATraspaso(b)) &&
-        (claveMes(a.fecha) === mes || claveMes(b.fecha) === mes)) {
+        (claveMes(a.fecha) === mes || claveMes(b.fecha) === mes) &&
+        !(a.cat === 'traspaso' && b.cat === 'traspaso')) {
       usados.add(a.id); usados.add(b.id);
       pares.push([a, b]);
     }
   }
   return pares;
+}
+// Busca en todos los meses el dinero que pasas de una cuenta tuya a otra y lo saca de los totales
+function marcarTodosTraspasos() {
+  const meses = [...new Set(S.movs.map(m => claveMes(m.fecha)))].sort();
+  let n = 0;
+  for (const mes of meses) {
+    for (const par of traspasosCruzados(mes)) {
+      par.forEach(m => { m.cat = 'traspaso'; m.manual = true; });
+      n++;
+    }
+  }
+  return n;
 }
 function marcarTraspasos(mes) {
   const pares = traspasosCruzados(mes);
@@ -2312,8 +2325,7 @@ function pedirFichero() { $('#ficheroInput').click(); }
 
 function procesar(file) {
   if (!file) return;
-  if (S.cuentas.length === 1) return importarEn(S.cuentas[0].id, file);
-  elegirCuenta(file);
+  elegirCuenta(file);   // pregunta siempre de qué cuenta es, para no mezclar la tuya con la de casa
 }
 
 let ficheroEnEspera = null;
@@ -2350,9 +2362,12 @@ async function importarEn(cuentaId, file) {
     avisar('Leyendo ' + file.name + '…');
     const r = await importarFichero(file, cuentaId);
     respaldoImport = r.previo;
+    const traspasos = r.anadidos ? marcarTodosTraspasos() : 0;
+    if (traspasos) guardar();
     pintar();
     if (r.anadidos) {
-      avisar(`${r.anadidos} movimientos nuevos en ${nombreCuenta(cuentaId)}${r.repetidos ? ' · ' + r.repetidos + ' ya los tenías' : ''}.`,
+      avisar(`${r.anadidos} movimientos nuevos en ${nombreCuenta(cuentaId)}${r.repetidos ? ' · ' + r.repetidos + ' ya los tenías' : ''}` +
+        (traspasos ? `. ${traspasos} ${traspasos === 1 ? 'paso de dinero entre tus cuentas no cuenta' : 'pasos de dinero entre tus cuentas no cuentan'} como gasto.` : '.'),
         {txt: 'Deshacer', fn: 'deshacerImport()'});
     } else {
       avisar('Ya tenías todos esos movimientos en ' + nombreCuenta(cuentaId) + '.');
