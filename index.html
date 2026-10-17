@@ -460,7 +460,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.21';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.23';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1019,6 +1019,11 @@ function tareasPendientes() {
     const dias = diasEntre(ultima, hoyISO());
     if (dias > 30) t.push({ico: '🏦', t: `Hace ${dias} días que no subes movimientos`, s: 'Descarga el Excel de BBVA y súbelo', ir: 'Subir', fn: 'pedirFichero()'});
   }
+  for (const r of (S.recibos || []).filter(x => x.tipo === 'luz' && x.facturas && x.facturas.length)) {
+    const ult = r.facturas[r.facturas.length - 1];
+    const dias = diasEntre(ult.hasta, hoyISO());
+    if (dias > 12) t.push({ico: '💡', t: `Sube la factura de luz de ${MESES[+ult.hasta.slice(5, 7) - 1]}`, s: `La última que tengo acaba el ${fechaCorta(ult.hasta)}. Súbela en PDF y se mete sola`, ir: 'Subir', fn: 'pedirFacturas()'});
+  }
   if (drive && drive.error) t.push({ico: '☁️', t: 'La copia en Drive ha fallado', s: drive.error, ir: 'Ver', fn: "irA('Ajustes')"});
   if (!t.length) return '';
   return `<h2>Por hacer</h2><div class="tarjeta">${t.map(x => `<button class="porhacer" onclick="${x.fn}">
@@ -1459,6 +1464,11 @@ function statsRecibo(r) {
   if (r.prima > 0) anual = r.prima;
   else if (cubreAnio && total12 > 0) anual = total12;
   else if (veces && media) { anual = media * veces; anualEstimado = true; }
+  else if (r.facturas && r.facturas.length) {
+    const fs = r.facturas.filter(f => f.hasta > sumarDias(hoy, -400));
+    const dias = fs.reduce((a, f) => a + (f.dias || 0), 0);
+    if (dias) { anual = fs.reduce((a, f) => a + f.total, 0) / dias * 365; anualEstimado = dias < 350; }
+  }
 
   // ¿Ha subido? Último cargo frente al de hace un año
   let subida = null;
@@ -1595,6 +1605,7 @@ function vistaRecibos() {
     ${grupo('Otros recibos', otros)}
     <div style="display:grid;gap:9px;margin-top:16px">
       <button class="btn" onclick="editarRecibo()">Añadir recibo</button>
+      <button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir facturas de luz en PDF</button>
       ${S.movs.length ? '<button class="btn sec" onclick="detectarRecibos()">Buscar más en mis movimientos</button>' : ''}
     </div>`;
 }
@@ -1641,8 +1652,10 @@ function abrirRecibo(id) {
     <div class="tarjeta"><div class="datos">${datos.map(([a, b]) => `<div><small>${a}</small><b class="num">${b}</b></div>`).join('')}</div></div>
     ${barras ? `<label>Últimos 12 meses</label><div class="tarjeta">${barras}</div>` : ''}
     ${ultimos ? `<label>Cargos en el banco</label><div class="tarjeta">${ultimos}</div>` : (r.txt ? '<p class="det" style="margin-top:14px">No encuentro cargos con ese texto. Revisa cómo aparece en Movimientos.</p>' : '')}
+    ${bloqueFacturas(r)}
     ${r.nota ? `<label>Nota</label><p style="margin:0;font-size:14.5px">${esc(r.nota)}</p>` : ''}
     <div style="display:grid;gap:9px;margin-top:20px">
+      ${r.tipo === 'luz' ? `<button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir factura en PDF</button>` : ''}
       <button class="btn" onclick="compararRecibo('${r.id}')">${r.tipo === 'agua' ? 'Revisar el consumo' : '¿Lo puedo pagar más barato?'}</button>
       ${ren ? `<button class="btn sec" onclick="recordatorioCalendario('${r.id}')">Añadir aviso al calendario</button>` : ''}
       <div class="acciones" style="margin-top:0">
@@ -1990,16 +2003,28 @@ function calcularEnergia() {
   if (c.importe > 0) filas.push(`<div class="res-fila"><div>Lo que pagas ahora<small>${(c.importe / c.kwh).toFixed(3).replace('.', ',')} €/kWh con todo incluido</small></div>
     <b class="num">${dinero(anual(c.importe))}/año</b></div>`);
   const validas = ofertas.filter(o => o.e > 0).map(o => ({...o, total: facturaEstimada(r.tipo, c, o)})).sort((a, b) => a.total - b.total);
+  // Si está tu tarifa actual, las demás se comparan con su cálculo (mismo método = comparación justa)
+  const control = validas.find(o => /^Tu tarifa ahora/.test(o.nombre || ''));
+  const base = control ? control.total : c.importe;
+  const otras = validas.filter(o => o !== control);
   for (const o of validas) {
-    const dif = c.importe > 0 ? anual(c.importe - o.total) : null;
+    if (o === control) {
+      filas.push(`<div class="res-fila"><div>${esc(o.nombre)}<small>Calculado: ${dinero(o.total)}${c.importe > 0 ? ' · factura real ' + dinero(c.importe) : ''}</small></div>
+        <div style="text-align:right"><b class="num">${dinero(anual(o.total))}/año</b><small class="num" style="color:var(--tinta-45)">referencia</small></div></div>`);
+      continue;
+    }
+    const dif = base > 0 ? anual(base - o.total) : null;
     filas.push(`<div class="res-fila"><div>${esc(o.nombre || 'Sin nombre')}<small>${dinero(o.total)} esta factura</small></div>
       <div style="text-align:right"><b class="num">${dinero(anual(o.total))}/año</b>
       ${dif != null ? `<small class="${dif > 0 ? 'ahorro' : 'caro'} num">${dif > 0 ? 'ahorras ' + dinero(dif) : dinero(-dif) + ' más'}</small>` : ''}</div></div>`);
   }
   if (!validas.length) filas.push('<div class="res-fila"><span style="color:var(--tinta-45)">Añade el precio de alguna tarifa.</span></div>');
   let veredicto = '';
-  if (validas.length && c.importe > 0) {
-    const ahorro = anual(c.importe - validas[0].total);
+  if (control && !otras.length) {
+    veredicto = `<div class="veredicto neutro" style="margin-bottom:10px"><b>Añade otra tarifa para comparar</b><span>Pulsa «Añadir PVPC» o mete el precio de otra compañía (lo sacas del comparador de la CNMC).</span></div>`;
+  } else if (otras.length && base > 0) {
+    const ahorro = anual(base - otras[0].total);
+    validas[0] = otras[0];
     veredicto = ahorro > 24
       ? `<div class="veredicto bien" style="margin-bottom:10px"><b>Sí te compensa: ahorras unos ${dinero(ahorro)} al año</b><span>Con ${esc(validas[0].nombre || 'la tarifa más barata')}. Mira antes si tienes permanencia.</span></div>`
       : `<div class="veredicto mal" style="margin-bottom:10px"><b>No te compensa cambiar</b><span>Ninguna tarifa te ahorra más de 2 € al mes con tu consumo.</span></div>`;
@@ -2181,6 +2206,131 @@ function guardarTel(cerrar) {
   clearTimeout(guardarTel.t);
   guardarTel.t = setTimeout(guardar, 600);
   if (cerrar) { guardar(); abrirRecibo(r.id); avisar('Guardado.'); }
+}
+
+/* ---------- facturas de luz en PDF ---------- */
+// Se leen en el propio móvil con pdf.js (incluido en la app): la factura no sale del dispositivo.
+
+function leerFacturaLuz(texto) {
+  const t = texto.replace(/\s+/g, ' ');
+  const num = s => s == null ? null : parseFloat(s.replace(/\./g, '').replace(',', '.'));
+  const fecha = s => { const m = (s || '').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+  const g = re => { const m = t.match(re); return m ? m[1] : null; };
+  const per = t.match(/Periodo de facturaci[oó]n:? del (\d{2}\/\d{2}\/\d{4}) a[l]? (\d{2}\/\d{2}\/\d{4}) \((\d+) d[ií]as\)/i);
+  const f = {
+    numero: g(/N[ºo°] ?factura:? ?([A-Z0-9-]+)/i),
+    emision: fecha(g(/Fecha emisi[oó]n factura:? ?(\d{2}\/\d{2}\/\d{4})/i)),
+    desde: per ? fecha(per[1]) : null,
+    hasta: per ? fecha(per[2]) : null,
+    dias: per ? +per[3] : null,
+    total: num(g(/ Total (?:a pagar )?(-?[\d.]+,\d{2}) ?€/i)),
+    kwh: num(g(/Consumo Total ([\d.]+,?\d*) ?kWh/i)),
+    potenciaKw: num(g(/Potencias? contratadas?:? punta-llano ([\d,]+) ?kW/i)),
+    potencia: num(g(/ Potencia (-?[\d.]+,\d{2}) ?€/)),
+    energia: num(g(/ Energ[ií]a (-?[\d.]+,\d{2}) ?€/)),
+    impuestos: num(g(/ Impuestos (-?[\d.]+,\d{2}) ?€/)),
+    descuentoPct: num(g(/Descuento indefinido [^%]*?x ?-?(\d+(?:,\d+)?) ?% ?DTO/i)),
+    precioKwh: num(g(/Consumo [\d.,]+ ?kWh x ([\d,]+) ?Eur\/kWh/i)),
+    precioPunta: num(g(/Pot\. Punta-Llano [\d,]+ ?kW x ([\d,]+) ?Eur\/kW/i)),
+    precioValle: num(g(/Pot\. Valle [\d,]+ ?kW x ([\d,]+) ?Eur\/kW/i)),
+    compania: /endesa/i.test(t) ? 'Endesa' : /iberdrola/i.test(t) ? 'Iberdrola' : /naturgy/i.test(t) ? 'Naturgy' : /repsol/i.test(t) ? 'Repsol' : /totalenergies/i.test(t) ? 'TotalEnergies' : '',
+    tarifa: g(/Contrato de mercado libre:? ?(.+?) (?:Referencia|Segmento|Peaje)/i),
+    finContrato: fecha(g(/Fin de contrato de suministro:? ?(\d{2}\/\d{2}\/\d{4})/i)),
+  };
+  return f;
+}
+
+async function cargarPdfJs() {
+  if (window.pdfjsLib) return;
+  await new Promise((ok, ko) => {
+    const sc = document.createElement('script');
+    sc.src = 'lib/pdf.min.js';
+    sc.onload = ok;
+    sc.onerror = () => ko(new Error('No se ha podido cargar el lector de PDF. ¿Tienes conexión?'));
+    document.head.appendChild(sc);
+  });
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+}
+async function textoDePdf(file) {
+  const doc = await pdfjsLib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise;
+  let txt = '';
+  for (let i = 1; i <= doc.numPages; i++) {
+    const c = await (await doc.getPage(i)).getTextContent();
+    txt += c.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('') + '\n';
+  }
+  return txt;
+}
+function pedirFacturas() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/pdf,.pdf'; inp.multiple = true;
+  inp.onchange = () => { if (inp.files.length) subirFacturas([...inp.files]); };
+  try { eligiendoArchivo = Date.now(); } catch (e) {}
+  inp.click();
+}
+async function subirFacturas(files) {
+  avisar(files.length === 1 ? 'Leyendo la factura…' : `Leyendo ${files.length} facturas…`);
+  try { await cargarPdfJs(); } catch (e) { return avisar(e.message); }
+  if (!Array.isArray(S.recibos)) S.recibos = [];
+  let nuevas = 0, repetidas = 0, recibo = null;
+  const fallidas = [];
+  for (const file of files) {
+    let f;
+    try { f = leerFacturaLuz(await textoDePdf(file)); } catch (e) { fallidas.push(file.name); continue; }
+    if (!(f.total > 0) || !f.desde || !f.hasta) { fallidas.push(file.name); continue; }
+    // su recibo de luz: el de la misma compañía, o uno nuevo
+    recibo = S.recibos.find(r => r.tipo === 'luz' && f.compania && norm(r.compania || r.txt).includes(norm(f.compania)))
+          || S.recibos.find(r => r.tipo === 'luz' && !f.compania);
+    if (!recibo) {
+      recibo = {id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tipo: 'luz', nombre: '', compania: f.compania || 'Luz',
+        txt: norm(f.compania || ''), prima: null, renovacion: '', aviso: 45, nota: '', pago: ''};
+      S.recibos.push(recibo);
+    }
+    recibo.facturas = recibo.facturas || [];
+    if (recibo.facturas.some(x => (f.numero && x.numero === f.numero) || (x.desde === f.desde && x.hasta === f.hasta))) { repetidas++; continue; }
+    recibo.facturas.push(f);
+    nuevas++;
+  }
+  if (recibo && recibo.facturas && recibo.facturas.length) {
+    recibo.facturas.sort((a, b) => a.desde.localeCompare(b.desde));
+    const u = recibo.facturas[recibo.facturas.length - 1];
+    // la última factura prepara el comparador: tus datos y tu tarifa actual como referencia
+    recibo.calc = {kwh: u.kwh, dias: u.dias, pot: u.potenciaKw, importe: u.total};
+    if (u.precioKwh) {
+      const actual = {nombre: 'Tu tarifa ahora' + (u.tarifa ? ' (' + u.tarifa.replace(/^Tarifa /i, '') + ')' : ''),
+        e: Math.round(u.precioKwh * (1 - (u.descuentoPct || 0) / 100) * 1e6) / 1e6,
+        p: Math.round(((u.precioPunta || 0) + (u.precioValle || 0)) * 1e6) / 1e6};
+      recibo.ofertas = [actual, ...(recibo.ofertas || []).filter(o => !/^Tu tarifa ahora/.test(o.nombre || ''))];
+    }
+    if (u.finContrato && !recibo.renovacion) recibo.renovacion = u.finContrato;
+  }
+  guardar(); pintar();
+  if (recibo && nuevas) { irA('Recibos'); abrirRecibo(recibo.id); }
+  avisar([nuevas ? `${nuevas} ${nuevas === 1 ? 'factura guardada' : 'facturas guardadas'}` : '',
+    repetidas ? `${repetidas} ya las tenías` : '',
+    fallidas.length ? `${fallidas.length} no he podido leer` : ''].filter(Boolean).join(' · ') + '.');
+}
+function bloqueFacturas(r) {
+  const fs = r.facturas || [];
+  if (!fs.length) return '';
+  const dias = fs.reduce((a, f) => a + (f.dias || 0), 0);
+  const total = fs.reduce((a, f) => a + f.total, 0);
+  const kwh = fs.reduce((a, f) => a + (f.kwh || 0), 0);
+  const max = Math.max(...fs.map(f => f.total));
+  const ult = fs.slice(-12);
+  return `<label>Tus facturas (${fs.length})</label>
+    <div class="tarjeta">
+      <div class="datos">
+        <div><small>Media al mes</small><b class="num">${dinero(total / dias * 30.4)}</b></div>
+        <div><small>Consumo medio al mes</small><b class="num">${Math.round(kwh / dias * 30.4)} kWh</b></div>
+        <div><small>Precio real (todo incluido)</small><b class="num">${(total / kwh).toFixed(3).replace('.', ',')} €/kWh</b></div>
+        <div><small>Total de estas facturas</small><b class="num">${dinero(total)}</b></div>
+      </div>
+      <div class="barras">${ult.map(f => `<div title="${dinero(f.total)}"><i style="height:${Math.max(6, f.total / max * 100)}%;background:${TIPOS_RECIBO.luz.c}"></i></div>`).join('')}</div>
+      <div class="barras-pie">${ult.map(f => `<span>${MESES[+f.desde.slice(5, 7) - 1][0].toUpperCase()}</span>`).join('')}</div>
+      ${fs.slice().reverse().map(f => `<div class="regla">
+        <div class="txt">${fechaCorta(f.desde)} – ${fechaCorta(f.hasta, true)}<div class="mov-sub">${f.kwh ? Math.round(f.kwh) + ' kWh · ' : ''}${f.dias} días${f.numero ? ' · ' + esc(f.numero) : ''}</div></div>
+        <b class="num">${dinero(f.total)}</b></div>`).join('')}
+    </div>`;
 }
 
 /* ---------- recordatorio en el calendario (.ics) ---------- */
