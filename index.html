@@ -354,7 +354,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.4';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.5';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1104,7 +1104,10 @@ function vistaAjustes() {
     <div class="cat-meta" style="padding:9px 4px 0"><span>Además hay ${REGLAS_INICIALES.length} reglas de fábrica (Mercadona, Amazon, Zurich…)</span></div>
     <div style="margin-top:12px"><button class="btn sec" onclick="reclasificar()">Volver a clasificar todo con las reglas</button></div>
 
-    <h2>Sincronización</h2>
+    ${bloqueDriveAjustes()}
+
+    <h2>Sincronización entre dispositivos (opcional)</h2>
+    <p class="nota-legal" style="margin:-4px 0 10px">Con Firebase los datos se guardan sin cifrar en tu proyecto de Google. Si solo quieres copia de seguridad, usa la de Drive, que va cifrada.</p>
     <div class="tarjeta lista-aj">
       <div class="aj"><div>
         <b>${{apagada:'Solo en este dispositivo', conectando:'Conectando…', lista:'Sincronizado con Firebase', error:'Error de sincronización'}[estadoNube]}</b>
@@ -2416,6 +2419,386 @@ comprobarActualizacion();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarActualizacion(); });
 window.addEventListener('pageshow', e => { if (e.persisted) comprobarActualizacion(); });
 setInterval(comprobarActualizacion, 30 * 60 * 1000);
+
+/* ============================================================
+   16. Copia cifrada en Google Drive
+   Los datos se cifran aquí (AES-GCM 256, clave sacada de tu contraseña
+   con PBKDF2) y a Drive solo llega un texto ilegible. Lo sube un pequeño
+   script de Google Apps Script que vive en tu propia cuenta.
+   ============================================================ */
+
+const CLAVE_DRIVE = 'cuentas.drive';
+const ITER_PBKDF2 = 600000;
+const CADA_HORAS = 20;        // copia diaria: se hace al abrir la app si la última tiene más de 20 h
+
+var drive = leerDrive();   // var: puede consultarse antes de llegar aquí
+var subiendoDrive = false;
+var asistente = null;         // datos del asistente de configuración mientras está abierto
+
+function leerDrive() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_DRIVE) || 'null'); } catch (e) { return null; }
+}
+function guardarDrive() {
+  try { drive ? localStorage.setItem(CLAVE_DRIVE, JSON.stringify(drive)) : localStorage.removeItem(CLAVE_DRIVE); } catch (e) {}
+}
+
+/* ---------- cifrado ---------- */
+
+const aB64 = buf => {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const deB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+
+async function claveDesdePassword(pass, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({name: 'PBKDF2', hash: 'SHA-256', salt, iterations: ITER_PBKDF2}, base, 256);
+  return aB64(bits);
+}
+async function claveAes(b64, uso) {
+  return crypto.subtle.importKey('raw', deB64(b64), 'AES-GCM', false, [uso]);
+}
+async function cifrar(texto, claveB64, saltB64) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const k = await claveAes(claveB64, 'encrypt');
+  const datos = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, k, new TextEncoder().encode(texto));
+  return JSON.stringify({app: 'cuentas', v: 1, kdf: 'PBKDF2-SHA256', it: ITER_PBKDF2, salt: saltB64, iv: aB64(iv), datos: aB64(datos)});
+}
+async function descifrar(paquete, pass) {
+  const p = typeof paquete === 'string' ? JSON.parse(paquete) : paquete;
+  if (!p || p.app !== 'cuentas' || !p.datos) throw new Error('Ese archivo no es una copia de Cuentas.');
+  const claveB64 = await claveDesdePassword(pass, deB64(p.salt));
+  try {
+    const k = await claveAes(claveB64, 'decrypt');
+    const plano = await crypto.subtle.decrypt({name: 'AES-GCM', iv: deB64(p.iv)}, k, deB64(p.datos));
+    return {texto: new TextDecoder().decode(plano), claveB64, salt: p.salt};
+  } catch (e) {
+    throw new Error('Contraseña incorrecta.');
+  }
+}
+
+/* ---------- comunicación con el script de Drive ---------- */
+
+async function llamarDrive(cfg, cuerpo) {
+  let r;
+  try {
+    // text/plain para que el navegador no haga petición previa (Apps Script no la admite)
+    r = await fetch(cfg.url, {method: 'POST', body: JSON.stringify({clave: cfg.clave, ...cuerpo})});
+  } catch (e) {
+    throw new Error('No se ha podido conectar con tu script de Google. Revisa la dirección y que tengas conexión.');
+  }
+  let d;
+  try { d = await r.json(); } catch (e) {
+    throw new Error('El script no responde bien. ¿Lo implementaste con acceso para "Cualquier usuario"?');
+  }
+  if (!d.ok) throw new Error(d.error === 'clave' ? 'La clave del script no coincide con la de la app.' : (d.error || 'Error en el script de Drive.'));
+  return d;
+}
+
+function hoyHora() {
+  const d = new Date();
+  return hoyISO() + '_' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+}
+
+async function copiaDrive(manual) {
+  if (!drive || !drive.claveAes || subiendoDrive) return;
+  if (!S.movs.length && !(S.recibos || []).length) { if (manual) avisar('Todavía no hay datos que copiar.'); return; }
+  subiendoDrive = true;
+  if (manual) avisar('Cifrando y subiendo a Drive…');
+  try {
+    const paquete = await cifrar(JSON.stringify(S), drive.claveAes, drive.salt);
+    const r = await llamarDrive(drive, {accion: 'subir', fecha: hoyHora(), datos: paquete});
+    drive.ultima = Date.now();
+    drive.ultimaDatos = S.actualizado || 0;
+    drive.total = r.total;
+    drive.error = '';
+    guardarDrive();
+    if (manual) avisar('Copia cifrada guardada en tu Drive.');
+  } catch (e) {
+    drive.error = e.message;
+    guardarDrive();
+    if (manual) avisar(e.message);
+  } finally {
+    subiendoDrive = false;
+    if (vista === 'Ajustes') pintar();
+  }
+}
+
+// Se llama al abrir la app y al volver a ella
+function copiaDriveSiToca() {
+  if (!drive || !drive.claveAes || !navigator.onLine) return;
+  const hace = Date.now() - (drive.ultima || 0);
+  const sinCambios = (S.actualizado || 0) <= (drive.ultimaDatos || 0);
+  if (hace < CADA_HORAS * 3600 * 1000) return;
+  if (sinCambios && hace < 7 * 24 * 3600 * 1000) return;   // sin cambios: basta una vez por semana
+  copiaDrive(false);
+}
+
+/* ---------- textos y asistente ---------- */
+
+function cuandoFue(ms) {
+  if (!ms) return 'nunca';
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 2) return 'hace un momento';
+  if (min < 60) return 'hace ' + min + ' min';
+  const d = new Date(ms);
+  const hora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  if (d.toDateString() === new Date().toDateString()) return 'hoy a las ' + hora;
+  return fechaCorta(d.toISOString().slice(0, 10)) + ' a las ' + hora;
+}
+
+function bloqueDriveAjustes() {
+  if (!drive || !drive.claveAes) {
+    return `<h2>Copia cifrada en Google Drive</h2>
+      <div class="tarjeta lista-aj"><div class="aj"><div><b>Sin configurar</b>
+        <small>Cada día, al abrir la app, se guarda una copia cifrada con tu contraseña en tu Drive. Nadie más puede leerla, ni Google.</small></div></div></div>
+      <div style="display:grid;gap:9px;margin-top:10px">
+        <button class="btn" onclick="abrirAsistenteDrive('nueva')">Configurar copia en Drive</button>
+        <button class="btn sec" onclick="abrirAsistenteDrive('existente')">Ya tengo copias: recuperarlas en este dispositivo</button>
+      </div>`;
+  }
+  return `<h2>Copia cifrada en Google Drive</h2>
+    <div class="tarjeta lista-aj">
+      <div class="aj"><div><b>${drive.error ? 'La última copia falló' : 'Última copia: ' + cuandoFue(drive.ultima)}</b>
+        <small>${drive.error ? esc(drive.error) : 'Se hace sola cada día al abrir la app. En tu Drive hay ' + (drive.total || 1) + (drive.total === 1 ? ' copia' : ' copias') + ' (se guardan las 30 últimas) en la carpeta «Cuentas - copias cifradas».'}</small></div></div>
+    </div>
+    <div style="display:grid;gap:9px;margin-top:10px">
+      <button class="btn sec" onclick="copiaDrive(true)">Hacer copia ahora</button>
+      <button class="btn sec" onclick="restaurarDrive()">Recuperar una copia de Drive</button>
+      <button class="btn peligro" onclick="desconectarDrive()">Desconectar Drive en este dispositivo</button>
+    </div>`;
+}
+
+function codigoScript(clave) {
+  return `// Cuentas: guarda en tu Drive las copias cifradas que manda la app.
+// Las copias llegan ya cifradas: este script no puede leer tus datos.
+const CLAVE = '${clave}';
+const CARPETA = 'Cuentas - copias cifradas';
+const GUARDAR = 30;
+
+function carpeta_() {
+  const it = DriveApp.getFoldersByName(CARPETA);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(CARPETA);
+}
+function responder_(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+function copias_(f) {
+  const lista = [];
+  const it = f.getFiles();
+  while (it.hasNext()) {
+    const x = it.next();
+    if (/^cuentas-.*\\.cifrado$/.test(x.getName())) lista.push(x);
+  }
+  return lista.sort((a, b) => b.getName().localeCompare(a.getName()));
+}
+function doPost(e) {
+  try {
+    const d = JSON.parse(e.postData.contents);
+    if (d.clave !== CLAVE) return responder_({ok: false, error: 'clave'});
+    const f = carpeta_();
+    if (d.accion === 'probar') return responder_({ok: true});
+    if (d.accion === 'subir') {
+      const nombre = 'cuentas-' + String(d.fecha).replace(/[^0-9_-]/g, '') + '.cifrado';
+      f.createFile(nombre, d.datos, MimeType.PLAIN_TEXT);
+      const lista = copias_(f);
+      lista.slice(GUARDAR).forEach(x => x.setTrashed(true));
+      return responder_({ok: true, nombre: nombre, total: Math.min(lista.length, GUARDAR)});
+    }
+    if (d.accion === 'listar') {
+      return responder_({ok: true, copias: copias_(f).map(x => ({nombre: x.getName(), tam: x.getSize()}))});
+    }
+    if (d.accion === 'bajar') {
+      const lista = copias_(f);
+      const x = d.nombre ? lista.find(y => y.getName() === d.nombre) : lista[0];
+      if (!x) return responder_({ok: false, error: 'No hay copias en Drive.'});
+      return responder_({ok: true, nombre: x.getName(), datos: x.getBlob().getDataAsString()});
+    }
+    return responder_({ok: false, error: 'Acción desconocida'});
+  } catch (err) {
+    return responder_({ok: false, error: String(err)});
+  }
+}
+`;
+}
+
+function claveAleatoria() {
+  const b = crypto.getRandomValues(new Uint8Array(18));
+  return aB64(b).replace(/[+/=]/g, '').slice(0, 22);
+}
+
+async function copiarTexto(texto, que) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    const t = document.createElement('textarea');
+    t.value = texto; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); } catch (e2) {}
+    t.remove();
+  }
+  avisar((que || 'Texto') + ' copiado.');
+}
+
+function abrirAsistenteDrive(modo) {
+  asistente = {modo, clave: modo === 'nueva' ? claveAleatoria() : ''};
+  pintarAsistente();
+}
+
+function pintarAsistente() {
+  const a = asistente;
+  const caja = 'width:100%;background:var(--tarjeta);border:1px solid var(--linea);border-radius:var(--radio-s);padding:12px 13px;font-size:15px';
+  if (a.modo === 'existente') {
+    return hoja(`<h3>Recuperar tus copias de Drive</h3>
+      <p class="det">Para un móvil u ordenador nuevo. La dirección y la clave están en tu script de Google Apps Script (la clave es la línea <code>CLAVE</code>).</p>
+      <label for="dUrl">Dirección de la aplicación web</label>
+      <input type="text" id="dUrl" style="${caja}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+      <label for="dClave">Clave del script</label>
+      <input type="text" id="dClave" style="${caja}" autocomplete="off" autocapitalize="off">
+      <label for="dPass">Tu contraseña de las copias</label>
+      <input type="password" id="dPass" style="${caja}" autocomplete="current-password">
+      <div class="acciones"><button class="btn sec" onclick="cerrarHoja()">Cancelar</button>
+        <button class="btn" onclick="conectarDriveExistente()">Conectar</button></div>`);
+  }
+  hoja(`<h3>Copia cifrada en tu Drive</h3>
+    <p class="det">Son 4 pasos y solo se hacen una vez. Mejor desde el ordenador.</p>
+
+    <label>1 · Elige una contraseña para cifrar las copias</label>
+    <input type="password" id="dPass" style="${caja}" placeholder="Mínimo 10 caracteres" autocomplete="new-password">
+    <input type="password" id="dPass2" style="${caja};margin-top:8px" placeholder="Repítela" autocomplete="new-password">
+    <p class="nota-legal" style="margin-top:8px"><b style="color:var(--carmin)">Si la olvidas, las copias no se pueden abrir.</b> Nadie puede recuperarla, tampoco yo. Apúntala en un sitio seguro.</p>
+
+    <label>2 · Crea el script en tu cuenta de Google</label>
+    <div class="enlaces" style="margin-top:0"><a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener"><div>Abrir Google Apps Script<small>Entra con tu cuenta personal de Google</small></div><span>↗</span></a></div>
+    <p class="nota-legal" style="margin-top:8px">Se abre un proyecto nuevo. Borra todo lo que trae, pega el código y pulsa el disquete para guardar.</p>
+    <button class="btn sec" style="margin-top:8px" onclick="copiarTexto(codigoScript(asistente.clave), 'Código')">Copiar el código</button>
+
+    <label>3 · Publícalo</label>
+    <ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6">
+      <li><b>Implementar → Nueva implementación</b>.</li>
+      <li>En la rueda ⚙ de «Tipo», elige <b>Aplicación web</b>.</li>
+      <li>Ejecutar como: <b>Yo</b>. Quién tiene acceso: <b>Cualquier usuario</b>.</li>
+      <li>Pulsa <b>Implementar</b> y autoriza el acceso a Drive. Si sale «Google no ha verificado esta aplicación», pulsa <b>Configuración avanzada → Ir a … (no seguro)</b>: es tu propio script.</li>
+      <li>Copia la <b>URL de la aplicación web</b> (acaba en <code>/exec</code>).</li>
+    </ol>
+
+    <label for="dUrl">4 · Pega aquí esa dirección</label>
+    <input type="text" id="dUrl" style="${caja}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+
+    <div class="acciones"><button class="btn sec" onclick="cerrarHoja()">Cancelar</button>
+      <button class="btn" id="btnDrive" onclick="terminarAsistenteDrive()">Probar y hacer la primera copia</button></div>`);
+}
+
+function urlValida(u) {
+  return /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u) ||
+         /^https:\/\/script\.google\.com\/a\/macros\/[\w.-]+\/s\/[\w-]+\/exec$/.test(u);
+}
+
+async function terminarAsistenteDrive() {
+  const pass = $('#dPass').value, pass2 = $('#dPass2').value;
+  const url = ($('#dUrl').value || '').trim();
+  if (pass.length < 10) return avisar('La contraseña tiene que tener al menos 10 caracteres.');
+  if (pass !== pass2) return avisar('Las dos contraseñas no coinciden.');
+  if (!urlValida(url)) return avisar('Esa dirección no parece la de la aplicación web. Tiene que acabar en /exec.');
+  const btn = $('#btnDrive');
+  btn.disabled = true; btn.textContent = 'Comprobando…';
+  try {
+    const cfg = {url, clave: asistente.clave};
+    await llamarDrive(cfg, {accion: 'probar'});
+    btn.textContent = 'Preparando el cifrado…';
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    drive = {...cfg, salt: aB64(salt), claveAes: await claveDesdePassword(pass, salt), ultima: 0, ultimaDatos: 0, error: ''};
+    guardarDrive();
+    asistente = null;
+    cerrarHoja();
+    await copiaDrive(true);
+    pintar();
+  } catch (e) {
+    avisar(e.message);
+    btn.disabled = false; btn.textContent = 'Probar y hacer la primera copia';
+  }
+}
+
+async function conectarDriveExistente() {
+  const url = ($('#dUrl').value || '').trim();
+  const clave = ($('#dClave').value || '').trim();
+  const pass = $('#dPass').value;
+  if (!urlValida(url)) return avisar('Esa dirección no parece la de la aplicación web. Tiene que acabar en /exec.');
+  if (!clave || !pass) return avisar('Faltan la clave o la contraseña.');
+  avisar('Buscando tus copias…');
+  try {
+    const cfg = {url, clave};
+    const r = await llamarDrive(cfg, {accion: 'bajar'});
+    const {texto, claveB64, salt} = await descifrar(r.datos, pass);
+    const d = JSON.parse(texto);
+    if (!Array.isArray(d.movs)) throw new Error('La copia está vacía o dañada.');
+    drive = {...cfg, salt, claveAes: claveB64, ultima: Date.now(), ultimaDatos: d.actualizado || 0, error: ''};
+    guardarDrive();
+    asistente = null;
+    cerrarHoja();
+    if (S.movs.length && !confirm(`He encontrado tu copia (${d.movs.length} movimientos). ¿Sustituyo lo que hay en este dispositivo?`)) {
+      pintar(); return avisar('Drive conectado. No he tocado los datos de aquí.');
+    }
+    S = {...ESTADO_INICIAL(), ...d};
+    guardar(); pintar();
+    avisar('Recuperada: ' + S.movs.length + ' movimientos y ' + (S.recibos || []).length + ' recibos.');
+  } catch (e) {
+    avisar(e.message);
+  }
+}
+
+async function restaurarDrive() {
+  avisar('Buscando copias en Drive…');
+  try {
+    const r = await llamarDrive(drive, {accion: 'listar'});
+    if (!r.copias.length) return avisar('No hay copias en Drive todavía.');
+    $('#capaAviso').innerHTML = '';
+    const nombreBonito = n => {
+      const m = n.match(/cuentas-(\d{4}-\d{2}-\d{2})_(\d{2})(\d{2})/);
+      return m ? fechaLarga(m[1]) + ' ' + m[1].slice(0, 4) + ', ' + m[2] + ':' + m[3] : n;
+    };
+    hoja(`<h3>Recuperar una copia</h3>
+      <p class="det">Sustituye lo que hay ahora en este dispositivo por la copia que elijas.</p>
+      <label for="dPass">Tu contraseña de las copias</label>
+      <input type="password" id="dPass" style="width:100%;background:var(--tarjeta);border:1px solid var(--linea);border-radius:var(--radio-s);padding:12px 13px;font-size:15px" autocomplete="current-password">
+      <label>Copias guardadas</label>
+      <div class="tarjeta">${r.copias.map(c => `<button class="cat-fila" onclick="recuperarCopia('${esc(c.nombre)}')">
+        <div class="cat-cuerpo"><div class="cat-nombre"><span>${esc(nombreBonito(c.nombre))}</span><b class="num">${Math.max(1, Math.round(c.tam / 1024))} KB</b></div></div></button>`).join('')}</div>
+      <div class="acciones"><button class="btn sec" onclick="cerrarHoja()">Cancelar</button></div>`);
+  } catch (e) {
+    avisar(e.message);
+  }
+}
+
+async function recuperarCopia(nombre) {
+  const pass = $('#dPass').value;
+  if (!pass) return avisar('Escribe primero la contraseña.');
+  avisar('Descargando y descifrando…');
+  try {
+    const r = await llamarDrive(drive, {accion: 'bajar', nombre});
+    const {texto} = await descifrar(r.datos, pass);
+    const d = JSON.parse(texto);
+    if (!Array.isArray(d.movs)) throw new Error('La copia está vacía o dañada.');
+    if (!confirm(`Esta copia tiene ${d.movs.length} movimientos. Se sustituirá lo que hay ahora en este dispositivo. ¿Seguro?`)) return;
+    S = {...ESTADO_INICIAL(), ...d};
+    guardar(); cerrarHoja(); pintar();
+    avisar('Copia recuperada.');
+  } catch (e) {
+    avisar(e.message);
+  }
+}
+
+function desconectarDrive() {
+  if (!confirm('Este dispositivo dejará de hacer copias en Drive. Las copias que ya hay siguen allí. ¿Seguro?')) return;
+  drive = null;
+  guardarDrive();
+  pintar();
+  avisar('Drive desconectado en este dispositivo.');
+}
+
+copiaDriveSiToca();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') copiaDriveSiToca(); });
 </script>
 </body>
 </html>
