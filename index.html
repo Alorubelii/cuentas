@@ -7,8 +7,10 @@
 <meta name="theme-color" content="#16212E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316212E'/%3E%3Cpath d='M16 42V22M26 42V30M36 42V26M46 42V34' stroke='%23E7E9E2' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Cuentas%22%2C%22short_name%22%3A%22Cuentas%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23E7E9E2%22%2C%22theme_color%22%3A%22%2316212E%22%7D">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Cuentas">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -352,7 +354,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.2';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.3';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
