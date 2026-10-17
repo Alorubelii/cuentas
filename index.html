@@ -81,6 +81,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 /* ---------- contenido ---------- */
 main{padding:18px 16px 8px;max-width:720px;margin:0 auto}
+.portada.oculto+main{padding-top:calc(var(--safe-t) + 18px)}
 h2{font-size:14px;font-weight:700;letter-spacing:.01em;color:var(--tinta);margin:26px 0 11px}
 h2:first-child{margin-top:4px}
 .tarjeta{background:var(--tarjeta);border:1px solid var(--linea);border-radius:var(--radio);overflow:hidden}
@@ -263,6 +264,29 @@ html.bloqueada #candado{display:flex !important}
 .ahorro-fila{display:flex;align-items:center;gap:11px;width:100%;padding:12px 14px;border-bottom:1px solid var(--linea-suave);text-align:left}
 .ahorro-fila:last-child{border-bottom:none}
 .ahorro-fila .ir{margin-left:auto;background:var(--tinta);color:#EDEFE8;border-radius:100px;padding:6px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+.frase{font-size:17px;line-height:1.5;margin:2px 2px 4px;color:var(--tinta)}
+.frase b{font-weight:700}
+.pasos-cab{display:flex;justify-content:space-between;align-items:baseline;padding:14px 14px 4px}
+.pasos-cab b{font-size:16px}
+.pasos-cab span{font-size:13px;color:var(--tinta-45);font-weight:600}
+.paso{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;text-align:left;border-top:1px solid var(--linea-suave);font-size:15.5px}
+.paso .n{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;background:#EEF2F8;color:var(--azul)}
+.paso.hecho .n{background:#DDEFE3;color:var(--verde)}
+.paso.hecho .t{color:var(--tinta-45);text-decoration:line-through}
+.paso .t{flex:1}
+.paso .ir{color:var(--azul);font-weight:600;font-size:14px}
+.porhacer{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;text-align:left;border-bottom:1px solid var(--linea-suave);font-size:15px}
+.porhacer:last-child{border-bottom:none}
+.porhacer .ico{flex:none;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;background:#FBF0D9}
+.porhacer .t{flex:1;min-width:0}
+.porhacer .t small{display:block;color:var(--tinta-45);font-size:13px;margin-top:1px}
+.porhacer .ir{color:var(--azul);font-weight:600;font-size:14px;white-space:nowrap}
+details.mas{margin-top:22px}
+details.mas>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:var(--tarjeta);border:1px solid var(--linea);border-radius:var(--radio-s);padding:14px;font-weight:600;font-size:15px}
+details.mas>summary::-webkit-details-marker{display:none}
+details.mas>summary::after{content:'›';font-size:22px;color:var(--tinta-45);transition:transform .2s}
+details.mas[open]>summary::after{transform:rotate(90deg)}
+.volver{display:inline-flex;align-items:center;gap:6px;color:var(--azul);font-weight:600;font-size:15px;padding:4px 0 10px}
 .nota-legal{color:var(--tinta-45);font-size:12.5px;line-height:1.55;margin:14px 0 0}
 @media(max-width:380px){nav button{font-size:10.5px}}
 
@@ -315,9 +339,8 @@ try { var _b = JSON.parse(localStorage.getItem('calderilla.bloqueo') || 'null');
 </div>
 
 <nav>
-  <button data-vista="Resumen" aria-current="true"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Resumen</button>
+  <button data-vista="Resumen" aria-current="true"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Inicio</button>
   <button data-vista="Movimientos"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Movimientos</button>
-  <button data-vista="Presupuestos"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v8.5l6 4"/></svg>Presupuestos</button>
   <button data-vista="Recibos"><svg viewBox="0 0 24 24"><path d="M6 2.5h12v19l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Recibos</button>
   <button data-vista="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4.5 15H4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 5.3 8.2l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V4a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.1.9z"/></svg>Ajustes</button>
 </nav>
@@ -437,7 +460,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.18';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.21';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -954,13 +977,73 @@ function pintarPortada() {
   const meses = mesesConDatos();
   $('#mesAnt').disabled = !mes;
   $('#mesSig').disabled = !mes;
-  document.getElementById('portada').style.opacity = mes ? '1' : '.92';
+  // la cabecera de cifras solo donde aporta: Inicio, Movimientos y Límites (y nunca sin datos)
+  document.getElementById('portada').classList.toggle('oculto', !S.movs.length || vista === 'Recibos' || vista === 'Ajustes');
 }
 
 /* ============================================================
    7. Vista: Resumen
    ============================================================ */
 
+function pasosIniciales() {
+  const p = [
+    {t: 'Sube el Excel de tu cuenta', ok: S.cuentas.length >= 1 && S.movs.length > 0, fn: 'pedirFichero()'},
+    {t: 'Sube el Excel de la cuenta de casa', ok: S.cuentas.length >= 2, fn: 'pedirFichero()'},
+    {t: 'Busca tus recibos (seguros, luz, gas…)', ok: (S.recibos || []).length > 0, fn: "irA('Recibos');setTimeout(detectarRecibos,50)"},
+    {t: 'Protege la app con Face ID', ok: !!(candado && candado.activo), fn: "irA('Ajustes');setTimeout(ponerCandado,50)"},
+    {t: 'Activa la copia de seguridad en Drive', ok: !!(drive && drive.claveAes), fn: "irA('Ajustes');setTimeout(()=>abrirAsistenteDrive('nueva'),50)"},
+  ];
+  return p;
+}
+function bloquePasos() {
+  const p = pasosIniciales();
+  const hechos = p.filter(x => x.ok).length;
+  if (hechos === p.length || S.guiaOculta) return '';
+  const siguiente = p.findIndex(x => !x.ok);
+  return `<div class="tarjeta" style="margin-bottom:6px">
+    <div class="pasos-cab"><b>${hechos ? 'Sigue por aquí' : 'Empieza aquí'}</b><span>${hechos} de ${p.length}</span></div>
+    ${p.map((x, i) => `<button class="paso ${x.ok ? 'hecho' : ''}" onclick="${x.fn}">
+      <span class="n">${x.ok ? '✓' : i + 1}</span><span class="t">${x.t}</span>${!x.ok && i === siguiente ? '<span class="ir">Hacer</span>' : ''}</button>`).join('')}
+    ${hechos >= 2 ? `<button class="paso" style="justify-content:center;color:var(--tinta-45);font-size:13.5px" onclick="S.guiaOculta=true;guardar();pintar()">Ocultar esta guía</button>` : ''}
+  </div>`;
+}
+function tareasPendientes() {
+  const t = [];
+  const sinClas = gruposPendientes().reduce((n, g) => n + g.movs.length, 0);
+  if (sinClas) t.push({ico: '🏷️', t: `${sinClas} ${sinClas === 1 ? 'movimiento' : 'movimientos'} sin clasificar`, s: 'Dime qué es cada uno y lo recuerdo', ir: 'Clasificar', fn: 'clasificarPendientes()'});
+  for (const {r, fecha, dias} of pendientesDeRenovar()) {
+    t.push({ico: r.tipo === 'seguro' ? '🛡️' : '📄', t: `${nombreRecibo(r)} renueva en ${dias} ${dias === 1 ? 'día' : 'días'}`, s: 'Compara antes de que se renueve solo', ir: 'Comparar', fn: `irA('Recibos');compararRecibo('${r.id}')`});
+  }
+  if (S.movs.length) {
+    const ultima = S.movs.reduce((a, m) => m.fecha > a ? m.fecha : a, '');
+    const dias = diasEntre(ultima, hoyISO());
+    if (dias > 30) t.push({ico: '🏦', t: `Hace ${dias} días que no subes movimientos`, s: 'Descarga el Excel de BBVA y súbelo', ir: 'Subir', fn: 'pedirFichero()'});
+  }
+  if (drive && drive.error) t.push({ico: '☁️', t: 'La copia en Drive ha fallado', s: drive.error, ir: 'Ver', fn: "irA('Ajustes')"});
+  if (!t.length) return '';
+  return `<h2>Por hacer</h2><div class="tarjeta">${t.map(x => `<button class="porhacer" onclick="${x.fn}">
+    <span class="ico">${x.ico}</span><span class="t">${esc(x.t)}<small>${esc(x.s)}</small></span><span class="ir">${x.ir}</span></button>`).join('')}</div>`;
+}
+function fraseMes() {
+  const mes = S.mesActivo;
+  if (!mes) return '';
+  const r = resumen(mes);
+  if (!r.movs.length) return '';
+  const nombre = MESES[+mes.slice(5) - 1];
+  const top = r.cats[0];
+  const actual = mes === hoyISO().slice(0, 7);
+  let f = `En ${nombre} ${actual ? 'llevas gastado' : 'gastaste'} <b>${dinero(r.gastos)}</b>`;
+  f += r.ingresos > 0 ? (r.neto >= 0 ? ` y ${actual ? 'te quedan' : 'te sobraron'} <b style="color:var(--verde)">${dinero(r.neto)}</b>.` : `, <b style="color:var(--carmin)">${dinero(-r.neto)} más de lo que entró</b>.`) : '.';
+  if (top) f += ` Donde más: <b>${esc((CAT[top.id] || CAT.otros).n.toLowerCase())}</b> (${dinero(top.total)}).`;
+  return `<p class="frase">${f}</p>`;
+}
+function vistaInicio() {
+  const subir = `<div style="margin-top:22px"><button class="btn" onclick="pedirFichero()">⬆︎ Subir movimientos del banco</button>
+    <p class="nota-legal" style="text-align:center;margin-top:8px">El Excel que descargas de BBVA. Si repites alguno, no se duplica.</p></div>`;
+  if (!S.movs.length) return `<div style="padding:calc(var(--safe-t) + 18px) 4px 14px"><h1 style="margin:0;font-size:28px;letter-spacing:-.02em">Hola 👋</h1>
+    <p class="frase" style="color:var(--tinta-70)">Calderilla te dice en qué se va tu dinero cada mes, te avisa de los recibos y te ayuda a pagar menos. Empieza con estos pasos:</p></div>` + bloquePasos() + subir;
+  return fraseMes() + tareasPendientes() + bloquePasos() + vistaResumen() + subir;
+}
 function vistaResumen() {
   const mes = S.mesActivo;
   if (!mes || !S.movs.length) {
@@ -1063,8 +1146,9 @@ function vistaResumen() {
           <b style="font-weight:600;color:var(--azul)">Clasificar</b></div></div></button></div>` : '';
 
   return `<h2>En qué se ha ido</h2><div class="tarjeta">${cats || '<div class="vacio">Ningún gasto este mes.</div>'}</div>
-    ${aviso}${avisoTraspasos}${anual}${comparativa}
-    <div style="margin-top:22px"><button class="btn sec" onclick="irA('Movimientos')">Ver los ${r.movs.length} movimientos</button></div>`;
+    ${avisoTraspasos}
+    <div style="margin-top:12px"><button class="btn sec" onclick="irA('Movimientos')">Ver los ${r.movs.length} movimientos</button></div>
+    ${anual || comparativa ? `<details class="mas"><summary>Comparar con otros meses</summary>${comparativa}${anual}</details>` : ''}`;
 }
 
 /* ============================================================
@@ -1129,6 +1213,10 @@ function vistaMovimientos() {
    ============================================================ */
 
 function vistaPresupuestos() {
+  return `<button class="volver" onclick="irA('Resumen')">‹ Inicio</button>
+    <p class="frase" style="font-size:15px;margin-bottom:6px">Pon un límite al mes a lo que quieras vigilar y te aviso si te pasas. Es opcional.</p>` + vistaPresupuestosCuerpo();
+}
+function vistaPresupuestosCuerpo() {
   const mes = S.mesActivo;
   if (!mes) return `<div class="tarjeta vacio"><p>Importa primero un mes y podrás ponerle tope a cada categoría.</p></div>`;
 
@@ -1181,12 +1269,13 @@ function vistaPresupuestos() {
 function vistaAjustes() {
   const meses = mesesConDatos();
   const reglasUsuario = S.reglas.filter(r => r.propia);
-  return `<h2>Datos del banco</h2>
+  return `<h2>Subir movimientos</h2>
     <div class="soltar" id="zonaSoltar">
-      <p>Suelta aquí el Excel de BBVA</p>
-      <small>También vale un CSV. Los movimientos repetidos se ignoran solos.</small>
+      <p>El Excel de movimientos de BBVA</p>
+      <small>Si subes alguno repetido, no se duplica.</small>
       <div style="margin-top:16px"><button class="btn mini" onclick="pedirFichero()">Elegir archivo</button></div>
     </div>
+
     <h2>Tus cuentas</h2>
     <div class="tarjeta">
       ${S.cuentas.length ? S.cuentas.map(c => {
@@ -1202,58 +1291,56 @@ function vistaAjustes() {
           <div class="pres-pie"><span>${n} ${n === 1 ? 'movimiento' : 'movimientos'}</span>
             <span class="num">${sal != null ? 'saldo ' + dinero(sal) : ''}</span></div>
         </div>`;
-      }).join('') : '<div class="vacio" style="padding:26px"><p style="margin:0;font-size:14px">Se crearán al importar el primer fichero.</p></div>'}
+      }).join('') : '<div class="vacio" style="padding:26px"><p style="margin:0;font-size:14px">Se crean al subir el primer Excel.</p></div>'}
     </div>
-    ${S.cuentas.length ? '<div style="margin-top:10px"><button class="btn sec" onclick="anadirCuenta()">Añadir otra cuenta</button></div>' : ''}
-
-    <h2>Resumen</h2>
-    <div class="tarjeta lista-aj">
-      <div class="aj"><div><b>${S.movs.length} movimientos guardados</b>
-        <small>${meses.length ? nombreMes(meses[0]) + ' — ' + nombreMes(meses[meses.length-1]) : 'Ninguno todavía'}</small></div></div>
-      <div class="aj"><div><b>Dónde se guarda</b>
-        <small>${hayDisco ? 'En este dispositivo, en el navegador. No sale de aquí.' : 'Aviso: el navegador no permite guardar. Los datos se perderán al cerrar.'}</small></div></div>
-    </div>
-
-    <h2>Reglas de categorías</h2>
-    <div class="tarjeta">
-      ${reglasUsuario.length ? reglasUsuario.map((r, i) => `<div class="regla">
-          <i class="punto" style="background:${(CAT[r.cat]||CAT.otros).c}"></i>
-          <div class="txt">Si pone <code>${esc(r.txt)}</code> → ${esc((CAT[r.cat]||CAT.otros).n)}</div>
-          <button onclick="borrarRegla(${i})" aria-label="Borrar regla">✕</button></div>`).join('')
-        : `<div class="vacio" style="padding:26px 20px"><p style="margin:0;font-size:14px">Aún no has creado reglas propias.<br>Toca un movimiento y cambia su categoría para crear una.</p></div>`}
-    </div>
-    <div class="cat-meta" style="padding:9px 4px 0"><span>Además hay ${REGLAS_INICIALES.length} reglas de fábrica (Mercadona, Amazon, Zurich…)</span></div>
-    <div style="margin-top:12px"><button class="btn sec" onclick="reclasificar()">Volver a clasificar todo con las reglas</button></div>
 
     ${bloqueAjustesSeguridad()}
 
     ${bloqueDriveAjustes()}
 
-    <h2>Sincronización entre dispositivos (opcional)</h2>
-    <p class="nota-legal" style="margin:-4px 0 10px">Con Firebase los datos se guardan sin cifrar en tu proyecto de Google. Si solo quieres copia de seguridad, usa la de Drive, que va cifrada.</p>
-    <div class="tarjeta lista-aj">
-      <div class="aj"><div>
-        <b>${{apagada:'Solo en este dispositivo', conectando:'Conectando…', lista:'Sincronizado con Firebase', error:'Error de sincronización'}[estadoNube]}</b>
-        <small>${estadoNube === 'lista' ? esc(nube.email || '') + ' · los cambios se suben solos'
-          : estadoNube === 'error' ? esc(detalleNube)
-          : 'Conéctalo y tendrás los mismos datos en el móvil y en el ordenador, con copia en la nube.'}</small>
-      </div></div>
-    </div>
-    <div style="display:grid;gap:9px;margin-top:10px">
-      <button class="btn sec" onclick="panelNube()">${estadoNube === 'lista' ? 'Cambiar la configuración' : 'Configurar sincronización'}</button>
-      ${estadoNube === 'lista' ? '<button class="btn peligro" onclick="desconectarNube()">Desconectar este dispositivo</button>' : ''}
-    </div>
+    <details class="mas"><summary>Opciones avanzadas</summary>
+      <h2>Límites de gasto</h2>
+      <button class="btn sec" onclick="irA('Presupuestos')">Poner límites por categoría</button>
 
-    <h2>Copia de seguridad</h2>
-    <div style="display:grid;gap:9px">
-      <button class="btn sec" onclick="exportarJson()">Descargar copia de todo</button>
-      <button class="btn sec" onclick="exportarCsv()">Descargar movimientos en CSV</button>
-      <button class="btn sec" onclick="restaurar()">Restaurar desde una copia</button>
-      <button class="btn peligro" onclick="borrarTodo()">Borrar todos los datos</button>
-    </div>
-    <p style="color:var(--tinta-45);font-size:12.5px;line-height:1.6;margin:22px 0 0">
-      Calderilla · versión ${VERSION_APP} · se actualiza sola. Los datos viven solo en este navegador, así que haz una copia de vez en cuando
-      y guárdala donde tú quieras.</p>`;
+      <h2>Tus reglas de categorías</h2>
+      <div class="tarjeta">
+        ${reglasUsuario.length ? reglasUsuario.map((r, i) => `<div class="regla">
+            <i class="punto" style="background:${(CAT[r.cat]||CAT.otros).c}"></i>
+            <div class="txt">Si pone <code>${esc(r.txt)}</code> → ${esc((CAT[r.cat]||CAT.otros).n)}</div>
+            <button onclick="borrarRegla(${i})" aria-label="Borrar regla">✕</button></div>`).join('')
+          : `<div class="vacio" style="padding:22px 18px"><p style="margin:0;font-size:14px">Aún no hay. Se crean solas al clasificar.</p></div>`}
+      </div>
+      <div style="display:grid;gap:9px;margin-top:10px">
+        <button class="btn sec" onclick="clasificarPendientes()">Clasificar lo pendiente</button>
+        <button class="btn sec" onclick="reclasificar()">Volver a clasificar todo</button>
+        ${S.cuentas.length ? '<button class="btn sec" onclick="anadirCuenta()">Añadir otra cuenta a mano</button>' : ''}
+      </div>
+
+      <h2>Copia manual</h2>
+      <div style="display:grid;gap:9px">
+        <button class="btn sec" onclick="exportarJson()">Descargar copia de todo</button>
+        <button class="btn sec" onclick="restaurar()">Restaurar desde una copia</button>
+        <button class="btn sec" onclick="exportarCsv()">Descargar movimientos en CSV</button>
+      </div>
+
+      <h2>Sincronizar con Firebase (sin cifrar)</h2>
+      <div class="tarjeta lista-aj">
+        <div class="aj"><div>
+          <b>${{apagada:'Desactivada', conectando:'Conectando…', lista:'Sincronizado con Firebase', error:'Error de sincronización'}[estadoNube]}</b>
+          <small>${estadoNube === 'lista' ? esc(nube.email || '') : estadoNube === 'error' ? esc(detalleNube) : 'No hace falta si usas la copia de Drive.'}</small>
+        </div></div>
+      </div>
+      <div style="display:grid;gap:9px;margin-top:10px">
+        <button class="btn sec" onclick="panelNube()">${estadoNube === 'lista' ? 'Cambiar la configuración' : 'Configurar'}</button>
+        ${estadoNube === 'lista' ? '<button class="btn peligro" onclick="desconectarNube()">Desconectar este dispositivo</button>' : ''}
+      </div>
+
+      <h2>Borrar</h2>
+      <button class="btn peligro" onclick="borrarTodo()">Borrar todos los datos de este dispositivo</button>
+    </details>
+
+    <p style="color:var(--tinta-45);font-size:12.5px;line-height:1.6;margin:22px 0 0;text-align:center">
+      Calderilla · versión ${VERSION_APP} · ${S.movs.length} movimientos${meses.length ? ' · ' + nombreMes(meses[0]) + ' a ' + nombreMes(meses[meses.length - 1]) : ''}</p>`;
 }
 
 /* ============================================================
@@ -2676,7 +2763,7 @@ function pintar() {
   $('#vRecibos').classList.toggle('oculto', vista !== 'Recibos');
   $('#vAjustes').classList.toggle('oculto', vista !== 'Ajustes');
 
-  if (vista === 'Resumen') $('#vResumen').innerHTML = avisosRenovacion(true) + vistaResumen();
+  if (vista === 'Resumen') $('#vResumen').innerHTML = vistaInicio();
   if (vista === 'Recibos') $('#vRecibos').innerHTML = vistaRecibos();
   if (vista === 'Movimientos') {
     const foco = document.activeElement === $('#cajaBusca');
