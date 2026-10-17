@@ -343,6 +343,7 @@ const CATEGORIAS = [
   {id:'compras',   n:'Compras',           tipo:'gasto',    c:'#7B4E8E'},
   {id:'coche',     n:'Coche',             tipo:'gasto',    c:'#3D6C78'},
   {id:'combust',   n:'Combustible',       tipo:'gasto',    c:'#5E7A3A'},
+  {id:'transp',    n:'Transporte y viajes',tipo:'gasto',   c:'#5B7FA6'},
   {id:'seguros',   n:'Seguros',           tipo:'gasto',    c:'#8A6B4F'},
   {id:'salud',     n:'Salud',             tipo:'gasto',    c:'#B04A6A'},
   {id:'subs',      n:'Suscripciones',     tipo:'gasto',    c:'#4A5F9E'},
@@ -392,6 +393,29 @@ const REGLAS_INICIALES = [
   ['seguros','mutua madrilena'], ['seguros','asisa'], ['seguros','dkv'],
   ['casa','curenergia'], ['casa','energia xxi'], ['casa','holaluz'], ['casa','octopus'], ['casa','totalenergies'],
   ['casa','som energia'], ['casa','lucera'], ['casa','aquona'], ['casa','canal de isabel'], ['casa','aguas de'],
+  ['coche','telpark'], ['coche','easypark'], ['coche','elparking'], ['coche','parkimeter'], ['coche','empark'],
+  ['coche','zona azul'], ['coche','peaje'], ['coche','via-t'], ['coche','autopistas'], ['coche','norauto'],
+  ['coche','feu vert'], ['coche','midas'], ['coche','carglass'], ['coche','lavado'],
+  ['combust','plenoil'], ['combust','esclatoil'], ['combust','estacion de servicio'], ['combust','e.s.'],
+  ['resto','uber eats'], ['resto','deliveroo'], ['resto','burger king'], ['resto','kfc'], ['resto','foster'],
+  ['resto','vips'], ['resto','goiko'], ['resto','100 montaditos'], ['resto','starbucks'], ['resto','pizzeria'],
+  ['resto','asador'], ['resto','meson'], ['resto','churreria'], ['resto','heladeria'],
+  ['transp','uber'], ['transp','cabify'], ['transp','bolt'], ['transp','freenow'], ['transp','renfe'],
+  ['transp','alsa'], ['transp','avanza'], ['transp','blablacar'], ['transp','iryo'], ['transp','ouigo'],
+  ['transp','taxi'], ['transp','vueling'], ['transp','ryanair'], ['transp','iberia'], ['transp','air europa'],
+  ['super','eroski'], ['super','bm supermercados'], ['super','coviran'], ['super','gadis'], ['super','simply'],
+  ['super','supercor'], ['super','masymas'], ['super','family cash'], ['super','carniceria'], ['super','fruteria'],
+  ['super','panaderia'],
+  ['compras','shein'], ['compras','temu'], ['compras','miravia'], ['compras','ebay'], ['compras','wallapop'],
+  ['compras','vinted'], ['compras','fnac'], ['compras','worten'], ['compras','primark'], ['compras','tiendanimal'],
+  ['compras','kiwoko'], ['compras','druni'], ['compras','sephora'], ['compras','bricomart'], ['compras','bricodepot'],
+  ['compras','lefties'], ['compras','mango'], ['compras','bershka'], ['compras','stradivarius'], ['compras','kiabi'],
+  ['compras','zalando'], ['compras','aliexpress'],
+  ['subs','youtube'], ['subs','playstation'], ['subs','xbox'], ['subs','steam'], ['subs','nintendo'],
+  ['subs','audible'], ['subs','icloud'], ['subs','dropbox'], ['subs','canva'], ['subs','chatgpt'], ['subs','dazn'],
+  ['subs','filmin'], ['subs','skyshowtime'], ['subs','movistar plus'], ['subs','amazon prime'], ['subs','hbomax'],
+  ['salud','hospital'], ['salud','quiron'], ['salud','vithas'], ['salud','podolog'], ['salud','fisioterap'],
+  ['ocio','ticketmaster'], ['ocio','entradas'], ['ocio','museo'], ['ocio','camping'], ['ocio','parque'],
   ['seguros','seguro'],
   ['bizum','bizum'],
   ['transf','transferencia'],
@@ -413,7 +437,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.17';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.18';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -550,12 +574,37 @@ function tipoDe(mov) {
   if (c.tipo === 'mixto') return mov.importe >= 0 ? 'ingreso' : 'gasto';
   return c.tipo;
 }
+// Intermediarios de pago y palabras genéricas: solo deciden si no se reconoce el comercio.
+// Así «PAYPAL *TELPARK» va a Coche (aparcamiento) y no a Compras.
+const REGLAS_DEBILES = new Set(['paypal', 'sumup', 'zettle', 'stripe', 'transferencia', 'bizum', 'seguro', 'tasa', 'impuesto', 'supermercado', 'gasolinera', 'restaurante', 'bar ']);
 function categorizar(mov) {
   const texto = norm(mov.concepto + ' ' + mov.movimiento);
+  // 1. tus reglas, en el orden en que las creaste
   for (const r of S.reglas) {
-    if (r.txt && texto.includes(norm(r.txt))) return r.cat;
+    if (r.propia && r.txt && texto.includes(norm(r.txt))) return r.cat;
+  }
+  // 2. de las reglas de fábrica, la más específica (la de texto más largo)
+  let mejor = null;
+  for (const r of S.reglas) {
+    if (r.propia || !r.txt || REGLAS_DEBILES.has(r.txt)) continue;
+    const t = norm(r.txt);
+    if (texto.includes(t) && (!mejor || t.length > mejor.t.length)) mejor = {t, cat: r.cat};
+  }
+  if (mejor) return mejor.cat;
+  // 3. las genéricas
+  for (const r of S.reglas) {
+    if (!r.propia && r.txt && REGLAS_DEBILES.has(r.txt) && texto.includes(norm(r.txt))) return r.cat;
   }
   return 'otros';
+}
+// Reglas nuevas (v3) para quien ya tenía datos: se añaden y se reclasifica lo que no tocaste a mano
+if ((S.versionReglas || 1) < 3) {
+  const tiene = new Set(S.reglas.map(r => r.txt));
+  const faltan = REGLAS_INICIALES.filter(r => !tiene.has(r.txt)).map(r => ({...r}));
+  S.reglas.push(...faltan);
+  S.versionReglas = 3;
+  S.movs.forEach(m => { if (!m.manual && m.cat !== 'traspaso') m.cat = categorizar(m); });
+  guardarLocal();
 }
 function limpiaConcepto(c) {
   return mayus((c || '').replace(/\s+/g, ' ').trim());
@@ -1007,11 +1056,11 @@ function vistaResumen() {
 
   const sinClasificar = r.cats.find(c => c.id === 'otros');
   const aviso = sinClasificar ? `<h2>Pendiente</h2><div class="tarjeta">
-      <button class="cat-fila" onclick="verCategoria('otros')">
+      <button class="cat-fila" onclick="clasificarPendientes()">
         <i class="punto" style="background:var(--dorado)"></i>
         <div class="cat-cuerpo"><div class="cat-nombre">
           <span>${sinClasificar.n} ${sinClasificar.n === 1 ? 'movimiento sin clasificar' : 'movimientos sin clasificar'}</span>
-          <b style="font-weight:500;color:var(--tinta-45)">Revisar</b></div></div></button></div>` : '';
+          <b style="font-weight:600;color:var(--azul)">Clasificar</b></div></div></button></div>` : '';
 
   return `<h2>En qué se ha ido</h2><div class="tarjeta">${cats || '<div class="vacio">Ningún gasto este mes.</div>'}</div>
     ${aviso}${avisoTraspasos}${anual}${comparativa}
@@ -2121,6 +2170,46 @@ function abrirMov(id) {
       ${m.origen === 'manual' ? '<button class="btn peligro" onclick="borrarMov()">Borrar</button>' : ''}
       <button class="btn" onclick="cerrarHoja()">Hecho</button>
     </div>`);
+}
+
+function gruposPendientes() {
+  const grupos = new Map();
+  for (const m of S.movs) {
+    if (m.cat !== 'otros' || m.manual) continue;
+    const clave = sugerirTexto(m) || norm(m.concepto).slice(0, 30);
+    if (!clave) continue;
+    if (!grupos.has(clave)) grupos.set(clave, {clave, movs: [], total: 0});
+    const g = grupos.get(clave); g.movs.push(m); g.total += m.importe;
+  }
+  return [...grupos.values()].sort((a, b) => b.movs.length - a.movs.length || Math.abs(b.total) - Math.abs(a.total));
+}
+function clasificarPendientes() {
+  const grupos = gruposPendientes();
+  if (!grupos.length) { cerrarHoja(); return avisar('No queda nada sin clasificar.'); }
+  const opts = CATEGORIAS.filter(c => c.id !== 'otros').map(c => `<option value="${c.id}">${esc(c.n)}</option>`).join('');
+  hoja(`<h3>Sin clasificar</h3>
+    <p class="det">Elige a qué pertenece cada uno. Se aplica a todos los parecidos, a los de antes y a los que vengan.</p>
+    <div class="tarjeta">${grupos.slice(0, 40).map((g, i) => `<div class="pres">
+      <div class="pres-cab"><div class="izq" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span style="font-weight:600">${esc(mayus(g.clave))}</span>
+          <small style="color:var(--tinta-45);font-size:13px">${g.movs.length} ${g.movs.length === 1 ? 'movimiento' : 'movimientos'} · ${dinero(g.total)} · ${esc(g.movs[0].concepto)}</small></div></div>
+      <select style="width:100%;margin-top:9px;background:#F2F3EE;border:1px solid var(--linea);border-radius:8px;padding:10px" onchange="if(this.value)clasificarGrupo(${i}, this.value)">
+        <option value="">¿Qué es?</option>${opts}</select></div>`).join('')}</div>
+    ${grupos.length > 40 ? `<p class="det" style="margin-top:10px">Y ${grupos.length - 40} más. Clasifica estos y aparecerán.</p>` : ''}
+    <div class="acciones"><button class="btn" onclick="cerrarHoja()">Hecho</button></div>`);
+}
+function clasificarGrupo(i, cat) {
+  const g = gruposPendientes()[i];
+  if (!g) return;
+  S.reglas.unshift({txt: g.clave, cat, propia: true});
+  let n = 0;
+  for (const m of S.movs) {
+    if (m.manual || m.cat !== 'otros') continue;
+    if (norm(m.concepto + ' ' + m.movimiento).includes(g.clave)) { m.cat = cat; n++; }
+  }
+  guardar(); pintar();
+  avisar(`${n} ${n === 1 ? 'movimiento va' : 'movimientos van'} a ${(CAT[cat] || CAT.otros).n}.`);
+  clasificarPendientes();
 }
 
 function sugerirTexto(m) {
