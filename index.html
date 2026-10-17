@@ -460,7 +460,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.24';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.25';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1597,7 +1597,7 @@ function vistaRecibos() {
     ${grupo('Otros recibos', otros)}
     <div style="display:grid;gap:9px;margin-top:16px">
       <button class="btn" onclick="editarRecibo()">Añadir recibo</button>
-      <button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir facturas de luz en PDF</button>
+      <button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir facturas de luz (PDF o archivo preparado)</button>
       ${S.movs.length ? '<button class="btn sec" onclick="detectarRecibos()">Buscar más en mis movimientos</button>' : ''}
     </div>`;
 }
@@ -2320,8 +2320,14 @@ async function textoDePdf(file) {
 }
 function pedirFacturas() {
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'application/pdf,.pdf'; inp.multiple = true;
-  inp.onchange = () => { if (inp.files.length) subirFacturas([...inp.files]); };
+  inp.type = 'file'; inp.accept = 'application/pdf,.pdf,application/json,.json'; inp.multiple = true;
+  inp.onchange = async () => {
+    const todos = [...inp.files];
+    const json = todos.filter(f => /\.json$/i.test(f.name));
+    const pdfs = todos.filter(f => !/\.json$/i.test(f.name));
+    for (const f of json) await unirRecibosPreparados(f);
+    if (pdfs.length) subirFacturas(pdfs);
+  };
   try { eligiendoArchivo = Date.now(); } catch (e) {}
   inp.click();
 }
@@ -2370,6 +2376,34 @@ async function subirFacturas(files) {
   avisar([nuevas ? `${nuevas} ${nuevas === 1 ? 'factura guardada' : 'facturas guardadas'}` : '',
     repetidas ? `${repetidas} ya las tenías` : '',
     fallidas.length ? `${fallidas.length} no he podido leer` : ''].filter(Boolean).join(' · ') + '.');
+}
+// Archivo con recibos y facturas ya leídos (por ejemplo, preparado por Claude): se añade sin borrar nada
+async function unirRecibosPreparados(file) {
+  let d;
+  try { d = JSON.parse(await file.text()); } catch (e) { return avisar('Ese archivo no se puede leer.'); }
+  if (!d || !d.calderillaRecibos || !Array.isArray(d.recibos)) return avisar('Ese archivo no es de facturas preparadas.');
+  if (!Array.isArray(S.recibos)) S.recibos = [];
+  let nuevas = 0, ultimo = null;
+  for (const rec of d.recibos) {
+    let r = S.recibos.find(x => x.tipo === rec.tipo && norm(x.compania || x.txt) === norm(rec.compania || rec.txt));
+    if (!r) {
+      r = {...rec, id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), facturas: []};
+      S.recibos.push(r);
+    }
+    r.facturas = r.facturas || [];
+    for (const f of rec.facturas || []) {
+      if (r.facturas.some(x => (f.numero && x.numero === f.numero) || (x.desde === f.desde && x.hasta === f.hasta))) continue;
+      r.facturas.push(f); nuevas++;
+    }
+    r.facturas.sort((a, b) => a.desde.localeCompare(b.desde));
+    if (rec.calc) r.calc = rec.calc;
+    if (rec.ofertas && rec.ofertas.length) r.ofertas = [...rec.ofertas, ...(r.ofertas || []).filter(o => !rec.ofertas.some(x => x.nombre === o.nombre))];
+    if (rec.renovacion && !r.renovacion) r.renovacion = rec.renovacion;
+    ultimo = r;
+  }
+  guardar(); pintar();
+  if (ultimo) { irA('Recibos'); abrirRecibo(ultimo.id); }
+  avisar(nuevas ? `${nuevas} ${nuevas === 1 ? 'factura añadida' : 'facturas añadidas'}.` : 'Ya tenías todas esas facturas.');
 }
 function bloqueFacturas(r) {
   const fs = r.facturas || [];
