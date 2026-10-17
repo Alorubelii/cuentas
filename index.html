@@ -166,8 +166,13 @@ nav button[aria-current="true"]{color:var(--tinta);font-weight:600}
 .velo{position:fixed;inset:0;background:rgba(22,33,46,.42);z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .hoja{background:var(--papel);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:8px 18px calc(24px + var(--safe-b));max-height:88vh;max-height:calc(100dvh - var(--safe-t) - 14px);overflow-y:auto;overscroll-behavior:contain;animation:sube .28s cubic-bezier(.32,.72,0,1)}
 @keyframes sube{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.tirador{width:38px;height:4px;border-radius:2px;background:var(--linea);margin:6px auto 14px}
-.hoja h3{margin:0 0 3px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.tirador{width:40px;height:5px;border-radius:3px;background:#C9CEC2;margin:4px auto 12px}
+.hoja-cab{position:sticky;top:-8px;z-index:2;background:var(--papel);margin:-8px -18px 0;padding:8px 18px 2px;touch-action:none}
+.hoja-x{position:absolute;right:12px;top:10px;width:32px;height:32px;border-radius:50%;background:#E3E6DD;color:var(--tinta-70);font-size:17px;line-height:32px;text-align:center;font-weight:600}
+.hoja.arrastrando{transition:none !important;animation:none !important}
+.hoja.soltando{transition:transform .22s cubic-bezier(.32,.72,0,1)}
+.velo.saliendo{transition:opacity .2s;opacity:0}
+.hoja h3{margin:0 0 3px;padding-right:40px;font-size:19px;font-weight:600;letter-spacing:-.01em}
 .hoja .imp-grande{font-size:27px;font-weight:700;margin:10px 0 4px}
 .hoja .det{color:var(--tinta-45);font-size:13.5px;margin:0 0 18px}
 .hoja label{display:block;font-size:12.5px;font-weight:600;color:var(--tinta-70);margin:18px 0 8px}
@@ -460,7 +465,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.25';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.26';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -2462,10 +2467,49 @@ function recordatorioCalendario(id) {
    ============================================================ */
 
 function cerrarHoja() { $('#capaHoja').innerHTML = ''; }
+// Cierre con animación (al deslizar hacia abajo o pulsar la ✕)
+function cerrarHojaAnimada() {
+  const h = document.querySelector('#capaHoja .hoja'), v = document.querySelector('#capaHoja .velo');
+  if (!h) return cerrarHoja();
+  h.classList.add('soltando'); h.style.transform = 'translateY(100%)';
+  if (v) v.classList.add('saliendo');
+  setTimeout(cerrarHoja, 210);
+}
+// Deslizar hacia abajo para cerrar, como las ventanas del iPhone
+function activarArrastre(h) {
+  let y0 = null, dy = 0, t0 = 0, desdeCab = false;
+  h.addEventListener('touchstart', e => {
+    desdeCab = !!e.target.closest('.hoja-cab');
+    // desde la cabecera siempre; desde el contenido solo si ya está arriba del todo
+    if (!desdeCab && h.scrollTop > 0) { y0 = null; return; }
+    if (e.target.closest('input,select,textarea')) { y0 = null; return; }
+    y0 = e.touches[0].clientY; dy = 0; t0 = Date.now();
+  }, {passive: true});
+  h.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy <= 0) { if (!desdeCab) { y0 = null; } h.style.transform = ''; return; }
+    if (!desdeCab && h.scrollTop > 0) { y0 = null; return; }
+    if (e.cancelable) e.preventDefault();
+    h.classList.add('arrastrando');
+    h.style.transform = `translateY(${dy}px)`;
+  }, {passive: false});
+  h.addEventListener('touchend', () => {
+    if (y0 == null) return;
+    h.classList.remove('arrastrando');
+    const rapido = dy > 40 && Date.now() - t0 < 250;
+    if (dy > 110 || rapido) cerrarHojaAnimada();
+    else { h.classList.add('soltando'); h.style.transform = ''; setTimeout(() => h.classList.remove('soltando'), 230); }
+    y0 = null;
+  });
+}
 
 function hoja(html) {
   $('#capaHoja').innerHTML = `<div class="velo" onclick="if(event.target===this)cerrarHoja()">
-    <div class="hoja" role="dialog" aria-modal="true"><div class="tirador"></div>${html}</div></div>`;
+    <div class="hoja" role="dialog" aria-modal="true">
+      <div class="hoja-cab"><div class="tirador"></div><button class="hoja-x" onclick="cerrarHojaAnimada()" aria-label="Cerrar">✕</button></div>
+      ${html}</div></div>`;
+  activarArrastre(document.querySelector('#capaHoja .hoja'));
 }
 
 let movAbierto = null;
