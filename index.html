@@ -352,6 +352,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
+const VERSION_APP = '2026-10-17.2';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1123,7 +1124,7 @@ function vistaAjustes() {
       <button class="btn peligro" onclick="borrarTodo()">Borrar todos los datos</button>
     </div>
     <p style="color:var(--tinta-45);font-size:12.5px;line-height:1.6;margin:22px 0 0">
-      Cuentas · uso personal. Los datos viven solo en este navegador, así que haz una copia de vez en cuando
+      Cuentas · versión ${VERSION_APP} · se actualiza sola. Los datos viven solo en este navegador, así que haz una copia de vez en cuando
       y guárdala donde tú quieras.</p>`;
 }
 
@@ -2367,6 +2368,52 @@ if (!S.mesActivo) {
 pintar();
 
 if (configNube()) arrancarNube(configNube());
+
+/* ============================================================
+   15. Actualización automática
+   Cada vez que se abre la app o se vuelve a ella, mira si en GitHub
+   hay una versión nueva. Si la hay, recarga (los datos no se tocan).
+   ============================================================ */
+
+let buscandoVersion = false;
+
+async function versionPublicada() {
+  const r = await fetch(location.pathname + '?v=' + Date.now(), {cache: 'no-store'});
+  if (!r.ok) return null;
+  const m = (await r.text()).match(/const VERSION_APP = '([^']+)'/);
+  return m ? m[1] : null;
+}
+function ocupado() {
+  return $('#capaHoja').innerHTML.trim() !== '' || ficheroEnEspera ||
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes((document.activeElement || {}).tagName);
+}
+async function comprobarActualizacion() {
+  if (buscandoVersion || !navigator.onLine || location.protocol === 'file:') return;
+  buscandoVersion = true;
+  try {
+    const v = await versionPublicada();
+    if (!v || v === VERSION_APP) return;
+    // Evita bucles si el servidor aún sirve la versión vieja en caché
+    let intentada = null;
+    try { intentada = sessionStorage.getItem('cuentas.recargada'); } catch (e) {}
+    if (intentada === v) return;
+    try { sessionStorage.setItem('cuentas.recargada', v); } catch (e) {}
+    guardarLocal();
+    if (ocupado()) {
+      avisar('Hay una versión nueva de la app.', {txt: 'Actualizar', fn: 'location.reload()'});
+    } else {
+      location.reload();
+    }
+  } catch (e) {
+    // sin conexión o GitHub no responde: se intentará la próxima vez
+  } finally {
+    buscandoVersion = false;
+  }
+}
+comprobarActualizacion();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarActualizacion(); });
+window.addEventListener('pageshow', e => { if (e.persisted) comprobarActualizacion(); });
+setInterval(comprobarActualizacion, 30 * 60 * 1000);
 </script>
 </body>
 </html>
