@@ -24,7 +24,12 @@
   --safe-t:env(safe-area-inset-top,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;height:100%}
+html{overflow:hidden}
+/* Contenedor de la app: la barra de abajo es parte del diseño, no un elemento flotante
+   (evita el fallo de iOS 26 que la coloca mal al abrir) */
+#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--papel)}
+#desliza{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding-bottom:12px}
 html{background:var(--papel)}
 /* franja fija bajo la hora y la isla dinámica: el contenido no se cuela por debajo al hacer scroll */
 body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--safe-t);background:var(--tarjeta);z-index:45;pointer-events:none}
@@ -32,8 +37,7 @@ body{
   font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
   background:var(--papel); color:var(--tinta);
   font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
-  padding-bottom:calc(60px + var(--safe-b));
-  min-height:100vh;min-height:100dvh;
+  height:100%;overflow:hidden;
 }
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
@@ -151,9 +155,7 @@ h2:first-child{margin-top:4px}
 .regla button{color:var(--tinta-45);font-size:19px;padding:2px 6px;line-height:1}
 
 /* nav */
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--tarjeta);backdrop-filter:blur(12px);border-top:1px solid var(--linea);display:flex;padding-bottom:max(calc(var(--safe-b) - 12px), 4px);z-index:40}
-/* rellena por debajo de la barra por si iOS deja un hueco en el borde inferior */
-nav::after{content:'';position:absolute;left:0;right:0;top:100%;height:120px;background:inherit}
+nav{position:relative;flex:none;background:var(--tarjeta);border-top:1px solid var(--linea);display:flex;padding-bottom:max(calc(var(--safe-b) - 12px), 4px);z-index:40}
 nav button{flex:1;padding:9px 2px 7px;font-size:11.5px;font-weight:500;color:var(--tinta-45);display:flex;flex-direction:column;align-items:center;gap:4px}
 nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 nav button[aria-current="true"]{color:var(--tinta);font-weight:600}
@@ -182,8 +184,8 @@ nav button[aria-current="true"]{color:var(--tinta);font-weight:600}
 
 /* aviso */
 /* bloqueo */
-html.bloqueada body>header,html.bloqueada main,html.bloqueada nav,html.bloqueada #capaHoja,
-html.tapada body>header,html.tapada main,html.tapada nav,html.tapada #capaHoja{visibility:hidden}
+html.bloqueada #app,html.bloqueada #capaHoja,
+html.tapada #app,html.tapada #capaHoja{visibility:hidden}
 html.bloqueada body{background:var(--tinta)}
 html.bloqueada #candado{display:flex !important}
 .candado{position:fixed;inset:0;z-index:100;padding-top:calc(var(--safe-t) + 24px) !important;padding-bottom:calc(var(--safe-b) + 24px) !important;background:linear-gradient(#22324A,#121B26);color:#EDEFE8;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -264,10 +266,9 @@ html.bloqueada #candado{display:flex !important}
 @media(max-width:380px){nav button{font-size:10.5px}}
 
 @media(min-width:640px){
-  body{padding-bottom:108px}
+  #desliza{padding-bottom:110px}
   .portada>*{max-width:720px;margin-left:auto;margin-right:auto}
-  nav::after{display:none}
-  nav{left:16px;right:16px;bottom:20px;max-width:620px;margin:0 auto;border:1px solid var(--linea);border-radius:100px;box-shadow:0 8px 26px rgba(22,33,46,.13)}
+  nav{position:fixed;left:16px;right:16px;bottom:20px;max-width:620px;margin:0 auto;border:1px solid var(--linea);border-radius:100px;box-shadow:0 8px 26px rgba(22,33,46,.13)}
   nav button{flex-direction:row;gap:8px;font-size:13.5px;padding:13px 6px}
   .aviso{bottom:96px}
   .velo{align-items:center}
@@ -285,6 +286,8 @@ try { var _b = JSON.parse(localStorage.getItem('calderilla.bloqueo') || 'null');
 </script>
 <div id="candado" class="candado oculto"></div>
 
+<div id="app">
+<div id="desliza">
 <header class="portada" id="portada">
   <div class="mes-nav">
     <button id="mesAnt" aria-label="Mes anterior">‹</button>
@@ -308,6 +311,7 @@ try { var _b = JSON.parse(localStorage.getItem('calderilla.bloqueo') || 'null');
   <section id="vRecibos" class="oculto"></section>
   <section id="vAjustes" class="oculto"></section>
 </main>
+</div>
 
 <nav>
   <button data-vista="Resumen" aria-current="true"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Resumen</button>
@@ -316,6 +320,7 @@ try { var _b = JSON.parse(localStorage.getItem('calderilla.bloqueo') || 'null');
   <button data-vista="Recibos"><svg viewBox="0 0 24 24"><path d="M6 2.5h12v19l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Recibos</button>
   <button data-vista="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4.5 15H4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 5.3 8.2l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V4a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.1.9z"/></svg>Ajustes</button>
 </nav>
+</div>
 
 <div id="capaHoja"></div>
 <div id="capaAviso"></div>
@@ -407,7 +412,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.11';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.12';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -2555,7 +2560,7 @@ function irA(v) {
   document.querySelectorAll('nav button').forEach(b =>
     b.setAttribute('aria-current', b.dataset.vista === v ? 'true' : 'false'));
   pintar();
-  window.scrollTo({top: 0, behavior: 'instant'});
+  $('#desliza').scrollTop = 0;
 }
 
 function pintar() {
@@ -3269,6 +3274,15 @@ document.addEventListener('visibilitychange', () => {
   } else if (document.documentElement.classList.contains('bloqueada') && candado.credId && !pidiendoFace) {
     desbloquearFace(true);
   }
+});
+// Refuerzo: algunos iPhone avisan con pagehide/pageshow en lugar de visibilitychange
+window.addEventListener('pagehide', () => {
+  if (!candado || !candado.activo || pidiendoFace || Date.now() - eligiendoArchivo < 120000) return;
+  try { sessionStorage.removeItem('calderilla.abierta'); } catch (e) {}
+  bloquear();
+});
+window.addEventListener('pageshow', () => {
+  if (candado && candado.activo && candado.credId && document.documentElement.classList.contains('bloqueada')) desbloquearFace(true);
 });
 document.getElementById('ficheroInput').addEventListener('click', () => { eligiendoArchivo = Date.now(); });
 document.getElementById('ficheroInput').addEventListener('change', () => { eligiendoArchivo = 0; });
