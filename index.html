@@ -465,7 +465,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.26';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.27';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1602,7 +1602,7 @@ function vistaRecibos() {
     ${grupo('Otros recibos', otros)}
     <div style="display:grid;gap:9px;margin-top:16px">
       <button class="btn" onclick="editarRecibo()">Añadir recibo</button>
-      <button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir facturas de luz (PDF o archivo preparado)</button>
+      <button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir facturas de luz o gas (PDF)</button>
       ${S.movs.length ? '<button class="btn sec" onclick="detectarRecibos()">Buscar más en mis movimientos</button>' : ''}
     </div>`;
 }
@@ -1652,7 +1652,8 @@ function abrirRecibo(id) {
     ${bloqueFacturas(r)}
     ${r.nota ? `<label>Nota</label><p style="margin:0;font-size:14.5px">${esc(r.nota)}</p>` : ''}
     <div style="display:grid;gap:9px;margin-top:20px">
-      ${r.tipo === 'luz' ? `<button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir factura en PDF</button>` : ''}
+      ${r.tipo === 'luz' || r.tipo === 'gas' ? `<button class="btn" onclick="estudioEnergia('${r.id}')">Ver estudio de ahorro</button>
+        <button class="btn sec" onclick="pedirFacturas()">⬆︎ Subir factura en PDF</button>` : ''}
       <button class="btn" onclick="compararRecibo('${r.id}')">${r.tipo === 'agua' ? 'Revisar el consumo' : '¿Lo puedo pagar más barato?'}</button>
       ${ren ? `<button class="btn sec" onclick="recordatorioCalendario('${r.id}')">Añadir aviso al calendario</button>` : ''}
       <div class="acciones" style="margin-top:0">
@@ -1841,10 +1842,12 @@ function ahorroEnergia(r) {
   const f = 365 / c.dias;
   const todas = (r.ofertas || []).filter(o => o.e > 0).concat(OFERTAS_REF[r.tipo] || []).map(o => ({...o, total: facturaEstimada(r.tipo, c, o)}));
   const control = todas.find(o => /^Tu tarifa ahora/.test(o.nombre || ''));
-  const base = control ? control.total : c.importe;
+  const k0 = control && c.importe > 0 && control.total > 0 ? c.importe / control.total : 1;
+  const k = k0 > 0.85 && k0 < 1.15 ? k0 : 1;
+  const base = c.importe > 0 ? c.importe : (control ? control.total : 0);
   const otras = todas.filter(o => o !== control).sort((a, b) => a.total - b.total);
   if (!(base > 0) || !otras.length) return {actual: c.importe > 0 ? c.importe * f : null};
-  return {actual: c.importe > 0 ? c.importe * f : base * f, ahorro: (base - otras[0].total) * f, mejor: otras[0].nombre};
+  return {actual: base * f, ahorro: (base - otras[0].total * k) * f, mejor: otras[0].nombre};
 }
 function bloqueComparaEnergia() {
   const tarjeta = tipo => {
@@ -1853,22 +1856,80 @@ function bloqueComparaEnergia() {
     const a = r && ahorroEnergia(r);
     let linea, accion;
     if (!r || !a) {
-      linea = tipo === 'luz' ? 'Sube tus facturas en PDF o mete los datos de una' : 'Mete el consumo de tu última factura de gas';
-      accion = !r ? (tipo === 'luz' ? 'pedirFacturas()' : "empezarComparar('gas')") : `compararRecibo('${r.id}')`;
+      linea = 'Sube tus facturas en PDF y te hago el estudio';
+      accion = !r ? 'pedirFacturas()' : `compararRecibo('${r.id}')`;
     } else {
       linea = a.ahorro > 24 ? `<b style="color:var(--verde)">Podrías ahorrar unos ${dineroCorto(a.ahorro)} al año</b>`
         : a.ahorro != null ? '<b>Tu tarifa ya está entre las baratas</b>' : 'Añade una oferta para comparar';
       if (a.actual) linea = `Pagas unos ${dineroCorto(a.actual)} al año · ` + linea;
-      accion = `compararRecibo('${r.id}')`;
+      accion = `estudioEnergia('${r.id}')`;
     }
     return `<button class="ahorro-fila" onclick="${accion}">
       <span class="ico" style="flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;background:${k.c}22">${tipo === 'luz' ? '💡' : '🔥'}</span>
       <div class="mov-cuerpo"><div class="mov-tit">${k.n}${r && r.compania ? ' · ' + esc(r.compania) : ''}</div>
         <div class="mov-sub" style="white-space:normal">${linea}</div></div>
-      <span class="ir">${r && a ? 'Ver' : 'Empezar'}</span></button>`;
+      <span class="ir">${r && a ? 'Estudio' : 'Subir'}</span></button>`;
   };
   return `<h2>Comparar luz y gas</h2><div class="tarjeta">${tarjeta('luz')}${tarjeta('gas')}</div>
     <p class="nota-legal" style="margin-top:6px">Con tus datos y las ofertas más baratas del mercado (${OFERTAS_REF.fecha}). El agua no se compara: la da una sola empresa en cada municipio.</p>`;
+}
+// Estudio de ahorro: tu contrato y tu consumo de un año frente a las compañías del mercado
+function estudioEnergia(id) {
+  const r = reciboDe(id);
+  if (!r) return;
+  reciboAbierto = id;
+  const c = r.calc;
+  const esLuz = r.tipo === 'luz';
+  if (!c || !(c.kwh > 0) || (esLuz && !(c.pot > 0))) return compararRecibo(id);
+  const f = 365 / c.dias;
+  const fs = r.facturas || [];
+  const u = fs[fs.length - 1] || {};
+  const lista = (r.ofertas || []).filter(o => o.e > 0).concat((OFERTAS_REF[r.tipo] || []).map(o => ({...o, ref: true})))
+    .map(o => ({...o, anual: facturaEstimada(r.tipo, c, o) * f}));
+  const control = lista.find(o => /^Tu tarifa ahora/.test(o.nombre || ''));
+  const realAnual = c.importe > 0 ? c.importe * f : (control ? control.anual : 0);
+  // Ajuste fino: si tu tarifa calculada difiere un poco de lo que pagas (bono social, redondeos…),
+  // se aplica la misma corrección a todas, para que todo cuadre con tu factura real
+  const k = control && c.importe > 0 && control.anual > 0 ? realAnual / control.anual : 1;
+  const kOk = k > 0.85 && k < 1.15 ? k : 1;
+  lista.forEach(o => { o.anual *= kOk; });
+  const actualAnual = realAnual || (control ? control.anual : 0);
+  const otras = lista.filter(o => o !== control).sort((a, b) => a.anual - b.anual);
+  const mejor = otras[0];
+  const ahorro = mejor ? actualAnual - mejor.anual : 0;
+  const veredicto = !mejor ? '<div class="veredicto neutro"><b>Añade una oferta para comparar</b></div>'
+    : ahorro > 24 ? `<div class="veredicto bien"><b>Sí, te sale más barato cambiar</b><span>Con ${esc(mejor.nombre)} ahorrarías unos <b>${dinero(ahorro)} al año</b> (${dinero(ahorro / 12)} al mes).</span></div>`
+    : `<div class="veredicto mal"><b>No merece la pena cambiar</b><span>Tu tarifa ya está entre las más baratas: la mejor alternativa te ahorraría menos de 2 € al mes.</span></div>`;
+  const fila = (o, i) => {
+    const d = actualAnual - o.anual;
+    return `<div class="res-fila"><div>${i === 0 && d > 24 ? '🏆 ' : ''}${esc(o.nombre)}<small>${o.ref ? 'Mercado · ' + OFERTAS_REF.fecha : 'Añadida por ti'}</small></div>
+      <div style="text-align:right"><b class="num">${dinero(o.anual)}/año</b>
+      <small class="${d > 0 ? 'ahorro' : 'caro'} num">${d > 0 ? 'ahorras ' + dinero(d / 12) + '/mes' : dinero(-d / 12) + '/mes más'}</small></div></div>`;
+  };
+  hoja(`<h3>Estudio de tu ${esLuz ? 'luz' : 'gas'}</h3>
+    <p class="det">${fs.length ? `Con tus ${fs.length} ${fs.length === 1 ? 'factura' : 'facturas'} (${fechaCorta(fs[0].desde, true)} – ${fechaCorta(u.hasta, true)})` : 'Con los datos que has metido'}. Se actualiza solo cada vez que subes una factura.</p>
+    ${veredicto}
+    <label>Lo que tienes contratado</label>
+    <div class="tarjeta"><div class="datos">
+      <div><small>Compañía</small><b>${esc(r.compania || '—')}</b></div>
+      <div><small>Tarifa</small><b>${esc((u.tarifa || '—').replace(/^Tarifa /i, ''))}</b></div>
+      <div><small>Consumo al año</small><b class="num">${Math.round(c.kwh * f).toLocaleString('es-ES')} kWh</b></div>
+      ${esLuz ? `<div><small>Potencia</small><b class="num">${String(c.pot).replace('.', ',')} kW</b></div>` : `<div><small>Precio fijo</small><b class="num">${u.fijoMes ? dinero(u.fijoMes) + '/mes' : '—'}</b></div>`}
+      <div><small>Pagas al año</small><b class="num">${dinero(realAnual)}</b></div>
+      <div><small>Precio del kWh</small><b class="num">${u.precioKwh ? u.precioKwh.toFixed(4).replace('.', ',') + ' €' + (u.descuentoPct ? ' −' + u.descuentoPct + '%' : '') : '—'}</b></div>
+    </div></div>
+    <label>Lo que pagarías con cada compañía (impuestos incluidos)</label>
+    <div class="tarjeta">${otras.map(fila).join('')}
+      <div class="res-fila" style="background:#F4F5F0"><div><b>Lo que pagas ahora</b><small>${esc(r.compania || '')}${control ? ' · ' + esc(control.nombre.replace(/^Tu tarifa ahora ?/, '').replace(/[()]/g, '')) : ''}</small></div><b class="num">${dinero(actualAnual)}/año</b></div></div>
+    ${ahorro > 24 ? `<label>Qué hacer</label>
+    <ol style="margin:0;padding-left:20px;font-size:14.5px;line-height:1.6">
+      <li>Confirma el precio de ${esc(mejor.nombre.split(' · ')[0])} en su web o en el comparador de la CNMC (cambian a menudo).</li>
+      <li>Llama a ${esc(r.compania || 'tu compañía')} y dile que tienes esa oferta: a veces te bajan el precio.</li>
+      <li>Si no, contrata la nueva: ella se encarga del cambio. No hay cortes ni cambias de contador${u.finContrato || r.renovacion ? '' : ''}.</li>
+    </ol>` : ''}
+    ${enlaces([['https://comparador.cnmc.gob.es', 'Comparador de la CNMC', 'Para confirmar precios o buscar más ofertas']])}
+    <div class="acciones"><button class="btn sec" onclick="compararRecibo('${r.id}')">Añadir otra oferta</button>
+      <button class="btn" onclick="cerrarHojaAnimada()">Hecho</button></div>`);
 }
 function empezarComparar(tipo) {
   if (!Array.isArray(S.recibos)) S.recibos = [];
@@ -2300,6 +2361,16 @@ function leerFacturaLuz(texto) {
     tarifa: g(/Contrato de mercado libre:? ?(.+?) (?:Referencia|Segmento|Peaje)/i),
     finContrato: fecha(g(/Fin de contrato de suministro:? ?(\d{2}\/\d{2}\/\d{4})/i)),
   };
+  // ¿luz o gas?
+  const esGas = /gas natural|\bTUR ?[12]\b|\bRL\.?[1-4]\b|m³|\bm3\b|factor de conversi[oó]n/i.test(t) && !/punta-llano|potencias? contratadas?/i.test(t);
+  f.tipo = esGas ? 'gas' : 'luz';
+  if (!f.kwh) f.kwh = num(g(/Consumo[^0-9€]{0,60}?([\d.]+,?\d*) ?kWh/i));
+  if (!f.precioKwh) f.precioKwh = num(g(/([\d]+,\d{3,6}) ?(?:€|Eur)\/kWh/i));
+  if (esGas) {
+    const fijo = t.match(/T[ée]rmino fijo[^0-9€]{0,80}?([\d]+,\d{2,6}) ?(?:€|Eur)\/(d[ií]a|mes)/i);
+    if (fijo) f.fijoMes = num(fijo[1]) * (/d/i.test(fijo[2]) ? 30.4 : 1);
+    if (/naturgy/i.test(t)) f.compania = 'Naturgy';
+  }
   return f;
 }
 
@@ -2347,10 +2418,10 @@ async function subirFacturas(files) {
     try { f = leerFacturaLuz(await textoDePdf(file)); } catch (e) { fallidas.push(file.name); continue; }
     if (!(f.total > 0) || !f.desde || !f.hasta) { fallidas.push(file.name); continue; }
     // su recibo de luz: el de la misma compañía, o uno nuevo
-    recibo = S.recibos.find(r => r.tipo === 'luz' && f.compania && norm(r.compania || r.txt).includes(norm(f.compania)))
-          || S.recibos.find(r => r.tipo === 'luz' && !f.compania);
+    recibo = S.recibos.find(r => r.tipo === f.tipo && f.compania && norm(r.compania || r.txt).includes(norm(f.compania)))
+          || S.recibos.find(r => r.tipo === f.tipo && (!f.compania || !r.compania));
     if (!recibo) {
-      recibo = {id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tipo: 'luz', nombre: '', compania: f.compania || 'Luz',
+      recibo = {id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tipo: f.tipo, nombre: '', compania: f.compania || (f.tipo === 'gas' ? 'Gas' : 'Luz'),
         txt: norm(f.compania || ''), prima: null, renovacion: '', aviso: 45, nota: '', pago: ''};
       S.recibos.push(recibo);
     }
@@ -2371,13 +2442,13 @@ async function subirFacturas(files) {
     if (u.precioKwh) {
       const actual = {nombre: 'Tu tarifa ahora' + (u.tarifa ? ' (' + u.tarifa.replace(/^Tarifa /i, '') + ')' : ''),
         e: Math.round(u.precioKwh * (1 - (u.descuentoPct || 0) / 100) * 1e6) / 1e6,
-        p: Math.round(((u.precioPunta || 0) + (u.precioValle || 0)) * 1e6) / 1e6};
+        p: recibo.tipo === 'gas' ? Math.round((u.fijoMes || 0) * 100) / 100 : Math.round(((u.precioPunta || 0) + (u.precioValle || 0)) * 1e6) / 1e6};
       recibo.ofertas = [actual, ...(recibo.ofertas || []).filter(o => !/^Tu tarifa ahora/.test(o.nombre || ''))];
     }
     if (u.finContrato && !recibo.renovacion) recibo.renovacion = u.finContrato;
   }
   guardar(); pintar();
-  if (recibo && nuevas) { irA('Recibos'); abrirRecibo(recibo.id); }
+  if (recibo && nuevas) { irA('Recibos'); estudioEnergia(recibo.id); }   // nada más subir, el estudio
   avisar([nuevas ? `${nuevas} ${nuevas === 1 ? 'factura guardada' : 'facturas guardadas'}` : '',
     repetidas ? `${repetidas} ya las tenías` : '',
     fallidas.length ? `${fallidas.length} no he podido leer` : ''].filter(Boolean).join(' · ') + '.');
