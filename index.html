@@ -29,13 +29,7 @@ html{overflow:hidden}
 /* Contenedor de la app: la barra de abajo es parte del diseño, no un elemento flotante
    (evita el fallo de iOS 26 que la coloca mal al abrir) */
 #app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--papel)}
-/* App en pantalla de inicio: iOS 26 calcula el alto como si Safari tuviera su barra
-   y deja un hueco abajo. 100lvh es el alto completo de la pantalla. */
-@media (display-mode: standalone){
-  #app{bottom:auto;height:100vh;height:100lvh}
-  html,body{background:var(--tarjeta)}
-}
-html.app-ios #app{bottom:auto;height:100vh;height:100lvh}
+html.app-ios,html.app-ios body{background:var(--tarjeta)}
 #desliza{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding-bottom:12px}
 html{background:var(--papel)}
 /* franja fija bajo la hora y la isla dinámica: el contenido no se cuela por debajo al hacer scroll */
@@ -419,7 +413,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.14';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.15';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -2622,8 +2616,9 @@ function recolocar() {
   const real = Math.max(window.innerHeight, document.documentElement.clientHeight,
     (window.visualViewport && visualViewport.height) || 0,
     (bajoLaHora && window.screen && screen.height && Math.abs(screen.width - window.innerWidth) < 4) ? screen.height : 0);
-  const alto = app.getBoundingClientRect().height;
-  if (real - alto > 8) app.style.height = real + 'px';
+  // alto exacto del área visible de la app (ni más, que corta la barra; ni menos, que deja hueco)
+  app.style.bottom = 'auto';
+  app.style.height = real + 'px';
   // obliga a iOS a recalcular la posición de lo que hay en pantalla (incluida la zona táctil)
   window.scrollTo(0, 1); window.scrollTo(0, 0);
   app.style.transform = 'translateZ(0)';
