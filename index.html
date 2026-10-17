@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Calderilla</title>
 <meta name="theme-color" content="#16212E">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --tinta:#16212E; --tinta-70:#4A5764; --tinta-45:#7C8894;
+  --tinta:#16212E; --tinta-70:#4A5764; --tinta-45:#66727E;
   --papel:#E7E9E2; --tarjeta:#FCFCFA; --linea:#D3D7CC; --linea-suave:#E3E6DD;
   --verde:#2E6B4F; --carmin:#983434; --azul:#2B4C7E; --dorado:#A87C22;
   --radio:14px; --radio-s:9px;
@@ -38,6 +38,11 @@ body{
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 input,select,textarea{font:inherit;color:inherit}
+/* que se comporte como una app: sin zoom al tocar dos veces ni al escribir */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text}
+@media(max-width:639px){input,select,textarea{font-size:16px !important}}
 :focus-visible{outline:2px solid var(--azul);outline-offset:2px;border-radius:4px}
 .oculto{display:none !important}
 
@@ -70,7 +75,7 @@ input,select,textarea{font:inherit;color:inherit}
 
 /* ---------- contenido ---------- */
 main{padding:18px 16px 8px;max-width:720px;margin:0 auto}
-h2{font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--tinta-70);margin:26px 0 11px}
+h2{font-size:14px;font-weight:700;letter-spacing:.01em;color:var(--tinta);margin:26px 0 11px}
 h2:first-child{margin-top:4px}
 .tarjeta{background:var(--tarjeta);border:1px solid var(--linea);border-radius:var(--radio);overflow:hidden}
 .vacio{text-align:center;padding:44px 22px;color:var(--tinta-45)}
@@ -87,7 +92,7 @@ h2:first-child{margin-top:4px}
 .cat-nombre b{font-weight:600;font-size:15px}
 .cat-barra{height:4px;border-radius:2px;background:var(--linea-suave);margin-top:7px;overflow:hidden}
 .cat-barra i{display:block;height:100%;border-radius:2px}
-.cat-meta{font-size:12px;color:var(--tinta-45);margin-top:5px;display:flex;justify-content:space-between}
+.cat-meta{font-size:13px;color:var(--tinta-45);margin-top:5px;display:flex;justify-content:space-between}
 
 /* movimientos */
 .dia{font-size:12px;font-weight:600;color:var(--tinta-45);padding:16px 4px 7px;letter-spacing:.02em}
@@ -96,7 +101,7 @@ h2:first-child{margin-top:4px}
 .mov:active{background:#F2F3EE}
 .mov-cuerpo{flex:1;min-width:0}
 .mov-tit{font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mov-sub{font-size:12.5px;color:var(--tinta-45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.mov-sub{font-size:13.5px;color:var(--tinta-45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .mov-imp{font-weight:600;font-size:15px;white-space:nowrap}
 .mov.excl .mov-tit,.mov.excl .mov-imp{opacity:.42;text-decoration:line-through}
 .imp-pos{color:var(--verde)}.imp-neg{color:var(--tinta)}
@@ -236,6 +241,24 @@ html.bloqueada #candado{display:flex !important}
 .enlaces{display:grid;gap:8px;margin-top:10px}
 .enlaces a{display:flex;justify-content:space-between;align-items:center;background:var(--tarjeta);border:1px solid var(--linea);border-radius:var(--radio-s);padding:12px 14px;color:var(--tinta);text-decoration:none;font-weight:500;font-size:14.5px}
 .enlaces a small{display:block;font-weight:400;color:var(--tinta-45);font-size:12.5px}
+.guia{background:#EEF2F8;border:1px solid #D3DDEC;border-radius:var(--radio-s);padding:11px 13px;font-size:14px;line-height:1.5;color:var(--tinta);margin-top:4px}
+.guia ul{margin:6px 0 0;padding-left:18px}
+.veredicto{border-radius:var(--radio);padding:15px 16px;display:flex;flex-direction:column;gap:4px}
+.veredicto b{font-size:17px;font-weight:700;line-height:1.3}
+.veredicto span{font-size:14px;line-height:1.45;opacity:.9}
+.veredicto.bien{background:#DDEFE3;color:#1F5A3E}
+.veredicto.medio{background:#FBF0D9;color:#7A5A12}
+.veredicto.mal{background:#F6E1DE;color:#7E2B2B}
+.veredicto.neutro{background:#ECEDE7;color:var(--tinta)}
+.tel-caja{padding:4px 14px 14px;margin-top:10px}
+.tel-cab{display:flex;gap:8px;align-items:center;margin-top:10px}
+.tel-cab input{flex:1;font-weight:600;background:#F2F3EE;border:1px solid var(--linea);border-radius:8px;padding:10px 11px}
+.tel-cab button{color:var(--tinta-45);font-size:19px;padding:4px 8px}
+.tel-grid label{font-size:12px !important;margin:12px 0 5px !important}
+.tel-grid input,.tel-grid select{width:100%;background:#F2F3EE;border:1px solid var(--linea);border-radius:8px;padding:10px 10px}
+.ahorro-fila{display:flex;align-items:center;gap:11px;width:100%;padding:12px 14px;border-bottom:1px solid var(--linea-suave);text-align:left}
+.ahorro-fila:last-child{border-bottom:none}
+.ahorro-fila .ir{margin-left:auto;background:var(--tinta);color:#EDEFE8;border-radius:100px;padding:6px 12px;font-size:13px;font-weight:600;white-space:nowrap}
 .nota-legal{color:var(--tinta-45);font-size:12.5px;line-height:1.55;margin:14px 0 0}
 @media(max-width:380px){nav button{font-size:10.5px}}
 
@@ -383,7 +406,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.8';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.9';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1173,6 +1196,7 @@ const TIPOS_RECIBO = {
   luz:    {n:'Luz',     pl:'Luz',          c:'#A87C22'},
   gas:    {n:'Gas',     pl:'Gas',          c:'#C4622C'},
   agua:   {n:'Agua',    pl:'Agua',         c:'#2F8391'},
+  tel:    {n:'Teléfono e internet', pl:'Teléfono e internet', c:'#4A5F9E'},
   otro:   {n:'Otro',    pl:'Otros recibos',c:'#7C8894'},
 };
 const QUE_ASEGURA = ['Coche','Moto','Hogar','Vida','Salud','Decesos','Otro'];
@@ -1187,6 +1211,8 @@ const PROVEEDORES = [
   ['asisa','seguro','Salud'], ['dkv','seguro','Salud'],
   ['iberdrola','luz'], ['endesa','luz'], ['curenergia','luz'], ['energia xxi','luz'], ['holaluz','luz'],
   ['octopus','luz'], ['totalenergies','luz'], ['som energia','luz'], ['lucera','luz'], ['naturgy','gas'],
+  ['movistar','tel'], ['vodafone','tel'], ['orange','tel'], ['yoigo','tel'], ['masmovil','tel'], ['pepephone','tel'],
+  ['lowi','tel'], ['simyo','tel'], ['jazztel','tel'], ['finetwork','tel'], ['avatel','tel'], ['adamo','tel'], ['digi spain','tel'], ['digi mobil','tel'],
   ['aqualia','agua'], ['aquona','agua'], ['canal de isabel','agua'], ['aguas de','agua'],
 ];
 
@@ -1372,7 +1398,7 @@ function vistaRecibos() {
 
   const grupo = (titulo, lista) => lista.length ? `<h2>${titulo}</h2><div class="tarjeta">${lista.map(fila).join('')}</div>` : '';
   const seguros = datos.filter(x => x.r.tipo === 'seguro');
-  const sumin = datos.filter(x => ['luz','gas','agua'].includes(x.r.tipo));
+  const sumin = datos.filter(x => ['luz','gas','agua','tel'].includes(x.r.tipo));
   const otros = datos.filter(x => x.r.tipo === 'otro');
 
   return `${avisosRenovacion(false)}
@@ -1382,8 +1408,34 @@ function vistaRecibos() {
       ${tipos.length > 1 ? `<div class="reparto">${tipos.map(t => `<i style="width:${porTipo[t] / total * 100}%;background:${TIPOS_RECIBO[t].c}"></i>`).join('')}</div>` : ''}
       <div class="leyenda">${tipos.map(t => `<span><i class="punto" style="background:${TIPOS_RECIBO[t].c}"></i>${TIPOS_RECIBO[t].pl} <b class="num">${dineroCorto(porTipo[t])}</b></span>`).join('')}</div>
     </div>
+    ${(() => {
+      const comparables = datos.filter(x => ['seguro', 'luz', 'gas', 'tel'].includes(x.r.tipo));
+      if (!comparables.length) return '';
+      return `<h2>¿Dónde puedo ahorrar?</h2><div class="tarjeta">${comparables.map(({r, st}) => {
+        const k = TIPOS_RECIBO[r.tipo];
+        const hecho = r.tipo === 'tel' ? r.telOfertas && r.telOfertas.length : r.tipo === 'seguro' ? r.oferta : r.ofertas && r.ofertas.length;
+        return `<button class="ahorro-fila" onclick="compararRecibo('${r.id}')">
+          <i class="punto" style="background:${k.c}"></i>
+          <div class="mov-cuerpo"><div class="mov-tit">${esc(nombreRecibo(r))}</div>
+            <div class="mov-sub">${hecho ? 'Ya comparado · toca para revisar' : 'Sin comparar todavía'}</div></div>
+          <span class="ir">Comparar</span></button>`;
+      }).join('')}</div>`;
+    })()}
+    ${(() => {
+      const comparables = datos.filter(x => ['seguro', 'luz', 'gas', 'tel'].includes(x.r.tipo));
+      if (!comparables.length) return '';
+      return `<h2>¿Dónde puedo ahorrar?</h2><div class="tarjeta">${comparables.map(({r, st}) => {
+        const k = TIPOS_RECIBO[r.tipo];
+        const hecho = r.tipo === 'tel' ? r.telOfertas && r.telOfertas.length : r.tipo === 'seguro' ? r.oferta : r.ofertas && r.ofertas.length;
+        return `<button class="ahorro-fila" onclick="compararRecibo('${r.id}')">
+          <i class="punto" style="background:${k.c}"></i>
+          <div class="mov-cuerpo"><div class="mov-tit">${esc(nombreRecibo(r))}</div>
+            <div class="mov-sub">${hecho ? 'Ya comparado · toca para revisar' : 'Sin comparar todavía'}</div></div>
+          <span class="ir">Comparar</span></button>`;
+      }).join('')}</div>`;
+    })()}
     ${grupo('Seguros', seguros)}
-    ${grupo('Luz, gas y agua', sumin)}
+    ${grupo('Luz, gas, agua y teléfono', sumin)}
     ${grupo('Otros recibos', otros)}
     <div style="display:grid;gap:9px;margin-top:16px">
       <button class="btn" onclick="editarRecibo()">Añadir recibo</button>
@@ -1480,7 +1532,7 @@ function pintarFormRecibo() {
       <select id="rSub">${QUE_ASEGURA.map(q => `<option ${q === b.sub ? 'selected' : ''}>${q}</option>`).join('')}</select>` : ''}
     <div class="campos">
       <div><label for="rNombre">Nombre</label><input type="text" id="rNombre" value="${esc(b.nombre)}" placeholder="${esc(nombreRecibo({...b, nombre: ''}))}"></div>
-      <div><label for="rCompania">Compañía</label><input type="text" id="rCompania" value="${esc(b.compania)}" placeholder="${esSeguro ? 'Mapfre' : b.tipo === 'agua' ? 'Aquona' : 'Iberdrola'}"></div>
+      <div><label for="rCompania">Compañía</label><input type="text" id="rCompania" value="${esc(b.compania)}" placeholder="${esSeguro ? 'Mapfre' : b.tipo === 'agua' ? 'Aquona' : b.tipo === 'tel' ? 'Movistar' : 'Iberdrola'}"></div>
     </div>
     <label for="rTxt">Cómo aparece en el banco</label>
     <input type="text" id="rTxt" value="${esc(b.txt)}" placeholder="Un trozo del concepto, p. ej. mapfre" oninput="contarCargosForm(this.value)">
@@ -1621,6 +1673,7 @@ function compararRecibo(id) {
   if (!r) return;
   reciboAbierto = id;
   if (r.tipo === 'luz' || r.tipo === 'gas') return compararEnergia(r);
+  if (r.tipo === 'tel') return compararTelefonia(r);
   if (r.tipo === 'agua') return revisarAgua(r);
   return compararSeguro(r);
 }
@@ -1704,6 +1757,14 @@ function compararEnergia(r) {
   const ofertas = r.ofertas && r.ofertas.length ? r.ofertas : [{nombre: '', e: null, p: null}];
   hoja(`<h3>${esc(nombreRecibo(r))}: ¿más barato?</h3>
     <p class="det">Coge tu última factura y copia estos datos. Con ellos calculo lo que te costaría con otras tarifas, con impuestos incluidos.</p>
+    <div class="guia"><b>Dónde está cada dato en tu factura:</b>
+      <ul>${esLuz ? `<li><b>kWh consumidos</b>: en «Consumo» o «Energía consumida» del periodo.</li>
+        <li><b>Potencia</b>: «Potencia contratada», en kW (suele ser 3,3 · 4,6 · 5,75).</li>`
+      : `<li><b>kWh consumidos</b>: en «Consumo». Si solo viene en m³, la factura trae el «factor de conversión»: m³ × ese número = kWh.</li>
+        <li><b>Término fijo</b> de cada oferta: viene en €/día o €/mes. Si es por día, multiplícalo por 30.</li>`}
+        <li><b>Días</b>: el «periodo de facturación» (del … al …).</li>
+        <li><b>Total</b>: el importe final, con IVA.</li></ul>
+      ${esLuz ? '' : '<div style="margin-top:6px">Consejo: compara siempre con la <b>tarifa regulada (TUR)</b>, que suele ser de las más baratas. Sale en el comparador de la CNMC.</div>'}</div>
     <div class="campos" style="margin-top:-8px">
       <div><label for="cKwh">kWh consumidos</label><input type="number" id="cKwh" inputmode="decimal" value="${c.kwh || ''}" placeholder="${esLuz ? '250' : '600'}" oninput="calcularEnergia()"></div>
       <div><label for="cDias">Días facturados</label><input type="number" id="cDias" inputmode="numeric" value="${dias}" oninput="calcularEnergia()"></div>
@@ -1780,7 +1841,16 @@ function calcularEnergia() {
       ${dif != null ? `<small class="${dif > 0 ? 'ahorro' : 'caro'} num">${dif > 0 ? 'ahorras ' + dinero(dif) : dinero(-dif) + ' más'}</small>` : ''}</div></div>`);
   }
   if (!validas.length) filas.push('<div class="res-fila"><span style="color:var(--tinta-45)">Añade el precio de alguna tarifa.</span></div>');
+  let veredicto = '';
+  if (validas.length && c.importe > 0) {
+    const ahorro = anual(c.importe - validas[0].total);
+    veredicto = ahorro > 24
+      ? `<div class="veredicto bien" style="margin-bottom:10px"><b>Sí te compensa: ahorras unos ${dinero(ahorro)} al año</b><span>Con ${esc(validas[0].nombre || 'la tarifa más barata')}. Mira antes si tienes permanencia.</span></div>`
+      : `<div class="veredicto mal" style="margin-bottom:10px"><b>No te compensa cambiar</b><span>Ninguna tarifa te ahorra más de 2 € al mes con tu consumo.</span></div>`;
+  }
   caja.innerHTML = filas.join('');
+  caja.previousElementSibling && caja.parentNode.querySelectorAll('.veredicto').forEach(v => v.remove());
+  if (veredicto) caja.insertAdjacentHTML('beforebegin', veredicto);
   guardarCalculo(false);
 }
 function guardarCalculo(cerrar) {
@@ -1816,6 +1886,145 @@ async function traerPvpc() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Añadir PVPC (precio regulado)'; }
   }
+}
+
+
+/* ---------- teléfono e internet ---------- */
+
+// Precios de Netflix en España (kelisto.es, junio 2026). Se pueden cambiar aquí.
+const NETFLIX = {'': 0, anuncios: 8.99, estandar: 14.99, premium: 21.99};
+const NETFLIX_N = {'': 'Sin Netflix', anuncios: 'Netflix con anuncios', estandar: 'Netflix Estándar', premium: 'Netflix Premium'};
+const FIBRAS = [[0, 'Sin fibra'], [100, '100 Mb'], [300, '300 Mb'], [500, '500 Mb'], [600, '600 Mb'], [1000, '1 Gb'], [10000, '10 Gb']];
+const DATOS = [[0, 'Sin móvil'], [10, '10 GB'], [25, '25 GB'], [50, '50 GB'], [100, '100 GB'], [200, '200 GB'], [9999, 'Ilimitados']];
+
+function opciones(lista, valor) {
+  return lista.map(([v, t]) => `<option value="${v}" ${String(v) === String(valor) ? 'selected' : ''}>${t}</option>`).join('');
+}
+function tarjetaTel(o, i, actual) {
+  const pre = actual ? 'tA' : 'tO';
+  return `<div class="tarjeta tel-caja" ${actual ? '' : `data-i="${i}"`}>
+    ${actual ? '' : `<div class="tel-cab"><input type="text" class="tN" value="${esc(o.nombre || '')}" placeholder="Compañía (p. ej. Digi)" oninput="calcularTel()">
+      <button onclick="this.closest('.tel-caja').remove();calcularTel()" aria-label="Quitar">✕</button></div>`}
+    <div class="campos tel-grid">
+      <div><label>${actual ? 'Pagas al mes (€)' : 'Precio al mes (€)'}</label><input type="number" class="tP" inputmode="decimal" step="0.01" value="${o.precio ?? ''}" placeholder="45" oninput="calcularTel()"></div>
+      <div><label>Fibra</label><select class="tF" onchange="calcularTel()">${opciones(FIBRAS, o.fibra ?? 600)}</select></div>
+      <div><label>Líneas móviles</label><input type="number" class="tL" inputmode="numeric" min="0" max="9" value="${o.lineas ?? 1}" oninput="calcularTel()"></div>
+      <div><label>Datos por línea</label><select class="tG" onchange="calcularTel()">${opciones(DATOS, o.gb ?? 9999)}</select></div>
+      <div><label>Netflix</label><select class="tX" onchange="calcularTel()">${opciones(Object.entries(NETFLIX_N), o.netflix ?? '')}</select></div>
+      <div><label>Llamadas ilimitadas</label><select class="tC" onchange="calcularTel()"><option value="1" ${o.llamadas !== false ? 'selected' : ''}>Sí</option><option value="0" ${o.llamadas === false ? 'selected' : ''}>No</option></select></div>
+      ${actual
+        ? `<div style="grid-column:1/-1"><label>Permanencia hasta (si tienes)</label><input type="date" class="tPerm" value="${esc(o.permanencia || '')}" onchange="calcularTel()"></div>`
+        : `<div><label>Precio tras la promo (€)</label><input type="number" class="tPt" inputmode="decimal" step="0.01" value="${o.precioTras ?? ''}" placeholder="Igual" oninput="calcularTel()"></div>
+           <div><label>Meses de promo</label><input type="number" class="tM" inputmode="numeric" min="0" max="24" value="${o.meses ?? ''}" placeholder="0" oninput="calcularTel()"></div>`}
+    </div></div>`;
+}
+function leerTel(caja) {
+  const v = s => caja.querySelector(s);
+  return {
+    nombre: v('.tN') ? v('.tN').value.trim() : '',
+    precio: numero(v('.tP').value),
+    fibra: +v('.tF').value, lineas: numero(v('.tL').value) ?? 0, gb: +v('.tG').value,
+    netflix: v('.tX').value, llamadas: v('.tC').value === '1',
+    permanencia: v('.tPerm') ? v('.tPerm').value : undefined,
+    precioTras: v('.tPt') ? numero(v('.tPt').value) : undefined,
+    meses: v('.tM') ? numero(v('.tM').value) : undefined,
+  };
+}
+
+function compararTelefonia(r) {
+  const st = statsRecibo(r);
+  const actual = r.tel || {precio: st.ultimo ? -st.ultimo.importe : null, fibra: 600, lineas: 1, gb: 9999, llamadas: true, netflix: 'estandar', permanencia: r.renovacion || ''};
+  const ofertas = r.telOfertas && r.telOfertas.length ? r.telOfertas : [{}];
+  hoja(`<h3>${esc(nombreRecibo(r))}: ¿me compensa cambiar?</h3>
+    <p class="det">Rellena lo que tienes ahora y las ofertas que veas. Te digo cuánto pagarías en un año con cada una, contando las promociones y lo que perderías o tendrías que pagar aparte.</p>
+    <div class="guia"><b>Dónde lo miras:</b> en tu factura o en la app de tu compañía, en «Mi tarifa». Las ofertas de otras compañías, en su web o en un comparador (abajo tienes enlaces).</div>
+
+    <label>Lo que tienes ahora${r.compania ? ' con ' + esc(r.compania) : ''}</label>
+    <div id="telActual">${tarjetaTel(actual, 0, true)}</div>
+
+    <label>Ofertas para comparar</label>
+    <div id="telOfertas">${ofertas.map((o, i) => tarjetaTel(o, i, false)).join('')}</div>
+    <button class="btn sec" style="margin-top:10px" onclick="nuevaOfertaTel()">+ Añadir otra oferta</button>
+
+    <label>Resultado</label>
+    <div id="resTel"></div>
+
+    <label>Buscar ofertas</label>
+    ${enlaces([
+      ['https://www.kelisto.es/internet', 'Kelisto', 'Comparador de fibra y móvil'],
+      ['https://www.rastreator.com', 'Rastreator', 'También compara fibra y móvil'],
+    ])}
+    <p class="nota-legal">Antes de cambiar, llama a tu compañía con la mejor oferta: muchas veces te la igualan. Y mira si tienes permanencia: irte antes puede tener penalización.</p>
+    <div class="acciones"><button class="btn sec" onclick="abrirRecibo('${r.id}')">Volver</button>
+      <button class="btn" onclick="guardarTel(true)">Guardar</button></div>`);
+  calcularTel();
+}
+function nuevaOfertaTel() {
+  const lista = $('#telOfertas');
+  lista.insertAdjacentHTML('beforeend', tarjetaTel({}, lista.children.length, false));
+  lista.lastElementChild.querySelector('.tN').focus();
+}
+function costeAnualTel(o) {
+  if (!(o.precio > 0)) return null;
+  const meses = Math.min(12, Math.max(0, o.meses || 0));
+  const tras = o.precioTras > 0 ? o.precioTras : o.precio;
+  return o.precio * meses + tras * (12 - meses);
+}
+function calcularTel() {
+  const r = reciboDe(reciboAbierto);
+  const caja = $('#resTel');
+  if (!r || !caja) return;
+  const a = leerTel($('#telActual .tel-caja'));
+  const ofertas = [...document.querySelectorAll('#telOfertas .tel-caja')].map(leerTel);
+  if (!(a.precio > 0)) { caja.innerHTML = '<div class="tarjeta"><div class="res-fila"><span style="color:var(--tinta-45)">Pon lo que pagas ahora al mes.</span></div></div>'; guardarTel(false); return; }
+  const anualActual = a.precio * 12;
+  const netflixActual = NETFLIX[a.netflix] || 0;
+  const res = ofertas.map(o => {
+    const base = costeAnualTel(o);
+    if (base == null) return null;
+    const avisos = [];
+    // Si tienes Netflix y la oferta no lo trae (o trae uno peor), lo pagarías aparte
+    const extraNetflix = Math.max(0, netflixActual - (NETFLIX[o.netflix] || 0)) * 12;
+    if (extraNetflix) avisos.push(`Netflix aparte: +${dinero(extraNetflix)}/año`);
+    if (o.fibra < a.fibra) avisos.push(`Menos fibra (${FIBRAS.find(f => f[0] === o.fibra)[1]})`);
+    if (o.gb < a.gb) avisos.push(`Menos datos (${DATOS.find(d => d[0] === o.gb)[1]})`);
+    if (o.lineas < a.lineas) avisos.push(`Menos líneas móviles (${o.lineas})`);
+    if (a.llamadas && !o.llamadas) avisos.push('Sin llamadas ilimitadas');
+    const mejoras = [];
+    if (o.fibra > a.fibra) mejoras.push('más fibra');
+    if (o.gb > a.gb) mejoras.push('más datos');
+    if ((NETFLIX[o.netflix] || 0) > netflixActual) mejoras.push('mejor Netflix');
+    if (o.meses > 0 && o.precioTras > o.precio) avisos.push(`Sube a ${dinero(o.precioTras)}/mes tras ${o.meses} meses`);
+    const total = base + extraNetflix;
+    return {...o, total, ahorro: anualActual - total, avisos, mejoras, peor: avisos.some(t => /^Menos|^Sin llamadas/.test(t))};
+  }).filter(Boolean).sort((x, y) => x.total - y.total);
+
+  let veredicto;
+  const mejor = res.find(x => !x.peor) || null;
+  if (!res.length) veredicto = `<div class="veredicto neutro"><b>Añade una oferta</b><span>Pagas ${dinero(anualActual)} al año. Mete el precio de otra compañía para compararla.</span></div>`;
+  else if (mejor && mejor.ahorro > 24) veredicto = `<div class="veredicto bien"><b>Sí te compensa: ahorras ${dinero(mejor.ahorro)} al año</b><span>Con ${esc(mejor.nombre || 'la oferta')}, con lo mismo o más de lo que tienes${mejor.mejoras.length ? ' (y ' + mejor.mejoras.join(', ') + ')' : ''}.</span></div>`;
+  else if (res[0].ahorro > 24) veredicto = `<div class="veredicto medio"><b>Puedes ahorrar ${dinero(res[0].ahorro)} al año, pero perdiendo cosas</b><span>${esc(res[0].nombre || 'Esa oferta')}: ${res[0].avisos.join(' · ')}.</span></div>`;
+  else veredicto = `<div class="veredicto mal"><b>No te compensa cambiar</b><span>Ninguna oferta te ahorra más de 2 € al mes con lo mismo que tienes. Pagas ${dinero(anualActual)} al año.</span></div>`;
+
+  const perm = a.permanencia && a.permanencia > hoyISO()
+    ? `<div class="guia" style="margin-top:10px">Tienes permanencia hasta el <b>${fechaCorta(a.permanencia, true)}</b>. Si te vas antes, te pueden cobrar una penalización: pregunta cuánto antes de decidir.</div>` : '';
+
+  caja.innerHTML = veredicto + perm + (res.length ? `<div class="tarjeta" style="margin-top:10px">
+    <div class="res-fila"><div>Lo que tienes ahora<small>${dinero(a.precio)}/mes</small></div><b class="num">${dinero(anualActual)}/año</b></div>
+    ${res.map(o => `<div class="res-fila"><div>${esc(o.nombre || 'Sin nombre')}<small>${o.avisos.length ? esc(o.avisos.join(' · ')) : 'Lo mismo o más que ahora'}</small></div>
+      <div style="text-align:right"><b class="num">${dinero(o.total)}/año</b><small class="${o.ahorro > 0 ? 'ahorro' : 'caro'} num">${o.ahorro > 0 ? 'ahorras ' + dinero(o.ahorro) : dinero(-o.ahorro) + ' más'}</small></div></div>`).join('')}
+  </div>` : '');
+  guardarTel(false);
+}
+function guardarTel(cerrar) {
+  const r = reciboDe(reciboAbierto);
+  if (!r || !$('#telActual')) return;
+  r.tel = leerTel($('#telActual .tel-caja'));
+  if (r.tel.permanencia !== undefined && r.tel.permanencia !== (r.renovacion || '')) { r.renovacion = r.tel.permanencia; r.renovEstimada = false; }
+  r.telOfertas = [...document.querySelectorAll('#telOfertas .tel-caja')].map(leerTel).filter(o => o.nombre || o.precio);
+  clearTimeout(guardarTel.t);
+  guardarTel.t = setTimeout(guardar, 600);
+  if (cerrar) { guardar(); abrirRecibo(r.id); avisar('Guardado.'); }
 }
 
 /* ---------- recordatorio en el calendario (.ics) ---------- */
@@ -2395,6 +2604,10 @@ document.addEventListener('drop', e => {
   if (e.dataTransfer.files.length) procesar(e.dataTransfer.files[0]);
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarHoja(); });
+// sin zoom con dos dedos (iOS ignora user-scalable=no)
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), {passive: false}));
+// sin zoom con dos dedos (iOS ignora user-scalable=no)
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), {passive: false}));
 
 if (!Array.isArray(S.recibos)) S.recibos = [];
 if (!S.mesActivo) {
