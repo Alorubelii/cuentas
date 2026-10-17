@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cuentas</title>
+<title>Calderilla</title>
 <meta name="theme-color" content="#16212E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="Cuentas">
+<meta name="apple-mobile-web-app-title" content="Calderilla">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -354,7 +354,7 @@ const ESTADO_INICIAL = () => ({
    2. Guardado (localStorage con respaldo en memoria)
    ============================================================ */
 
-const VERSION_APP = '2026-10-17.5';   // súbela en cada cambio: así los móviles se actualizan solos
+const VERSION_APP = '2026-10-17.6';   // súbela en cada cambio: así los móviles se actualizan solos
 const CLAVE = 'cuentas.v1';
 let memoria = null;
 let hayDisco = true;
@@ -1129,7 +1129,7 @@ function vistaAjustes() {
       <button class="btn peligro" onclick="borrarTodo()">Borrar todos los datos</button>
     </div>
     <p style="color:var(--tinta-45);font-size:12.5px;line-height:1.6;margin:22px 0 0">
-      Cuentas · versión ${VERSION_APP} · se actualiza sola. Los datos viven solo en este navegador, así que haz una copia de vez en cuando
+      Calderilla · versión ${VERSION_APP} · se actualiza sola. Los datos viven solo en este navegador, así que haz una copia de vez en cuando
       y guárdala donde tú quieras.</p>`;
 }
 
@@ -1798,13 +1798,13 @@ function recordatorioCalendario(id) {
   const nom = nombreRecibo(r);
   const estampa = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
   const evento = (uid, dia, titulo, texto) => [
-    'BEGIN:VEVENT', 'UID:' + uid + '@cuentas', 'DTSTAMP:' + estampa,
+    'BEGIN:VEVENT', 'UID:' + uid + '@calderilla', 'DTSTAMP:' + estampa,
     'DTSTART;VALUE=DATE:' + f(dia), 'DTEND;VALUE=DATE:' + f(sumarDias(dia, 1)),
     'SUMMARY:' + esc2(titulo), 'DESCRIPTION:' + esc2(texto),
     'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc2(titulo), 'TRIGGER:PT9H', 'END:VALARM',
     'END:VEVENT'];
   const aviso = sumarDias(ren, -diasAviso(r));
-  const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Cuentas//Recibos//ES', 'CALSCALE:GREGORIAN',
+  const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Calderilla//Recibos//ES', 'CALSCALE:GREGORIAN',
     ...evento(r.id + '-aviso-' + f(ren), aviso < hoyISO() ? hoyISO() : aviso, `Pide precio: ${nom} renueva el ${fechaCorta(ren, true)}`,
       `Compara precio${r.compania ? ' con ' + r.compania : ''}. Para no renovar hay que avisar como muy tarde el ${fechaCorta(limiteBaja(ren), true)}.`),
     ...(r.tipo === 'seguro' ? evento(r.id + '-baja-' + f(ren), limiteBaja(ren), `Último día para dar de baja: ${nom}`,
@@ -2467,7 +2467,7 @@ async function cifrar(texto, claveB64, saltB64) {
 }
 async function descifrar(paquete, pass) {
   const p = typeof paquete === 'string' ? JSON.parse(paquete) : paquete;
-  if (!p || p.app !== 'cuentas' || !p.datos) throw new Error('Ese archivo no es una copia de Cuentas.');
+  if (!p || p.app !== 'cuentas' || !p.datos) throw new Error('Ese archivo no es una copia de Calderilla.');
   const claveB64 = await claveDesdePassword(pass, deB64(p.salt));
   try {
     const k = await claveAes(claveB64, 'decrypt');
@@ -2561,7 +2561,7 @@ function bloqueDriveAjustes() {
   return `<h2>Copia cifrada en Google Drive</h2>
     <div class="tarjeta lista-aj">
       <div class="aj"><div><b>${drive.error ? 'La última copia falló' : 'Última copia: ' + cuandoFue(drive.ultima)}</b>
-        <small>${drive.error ? esc(drive.error) : 'Se hace sola cada día al abrir la app. En tu Drive hay ' + (drive.total || 1) + (drive.total === 1 ? ' copia' : ' copias') + ' (se guardan las 30 últimas) en la carpeta «Cuentas - copias cifradas».'}</small></div></div>
+        <small>${drive.error ? esc(drive.error) : 'Se hace sola cada día al abrir la app. En tu Drive hay ' + (drive.total || 1) + (drive.total === 1 ? ' copia' : ' copias') + ' (se guardan las 30 últimas) en la carpeta «Calderilla - copias cifradas».'}</small></div></div>
     </div>
     <div style="display:grid;gap:9px;margin-top:10px">
       <button class="btn sec" onclick="copiaDrive(true)">Hacer copia ahora</button>
@@ -2571,10 +2571,10 @@ function bloqueDriveAjustes() {
 }
 
 function codigoScript(clave) {
-  return `// Cuentas: guarda en tu Drive las copias cifradas que manda la app.
+  return `// Calderilla: guarda en tu Drive las copias cifradas que manda la app.
 // Las copias llegan ya cifradas: este script no puede leer tus datos.
 const CLAVE = '${clave}';
-const CARPETA = 'Cuentas - copias cifradas';
+const CARPETA = 'Calderilla - copias cifradas';
 const GUARDAR = 30;
 
 function carpeta_() {
